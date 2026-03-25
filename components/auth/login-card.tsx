@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,6 +9,8 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import styles from "./login-card.module.css";
+import { signInWithEmail, signUpWithEmail } from "../../app/actions/auth-actions";
+import { createHouseAction, joinHouseAction } from "../../app/actions/house-actions";
 
 const loginSchema = z.object({
   email: z
@@ -63,10 +65,12 @@ type LoginCardProps = {
 };
 
 export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
-  const [showSetupStep, setShowSetupStep] = useState(initialFlow !== "login");
-  const [homeAction, setHomeAction] = useState<"create" | "join">(
-    initialFlow === "join" ? "join" : "create"
-  );
+  const preferredHomeAction = initialFlow === "join" ? "join" : "create";
+  const [showSetupStep, setShowSetupStep] = useState(false);
+  const [homeAction, setHomeAction] = useState<"create" | "join">(preferredHomeAction);
+  const [globalError, setGlobalError] = useState("");
+  const [globalSuccess, setGlobalSuccess] = useState("");
+  const [isPending, startTransition] = useTransition();
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -101,19 +105,73 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
   });
 
   const onLoginSubmit = (values: LoginFormValues) => {
-    console.log("Login submit", values);
+    setGlobalError("");
+    setGlobalSuccess("");
+
+    startTransition(async () => {
+      const result = await signInWithEmail({
+        ...values,
+        redirectTo: initialFlow === "login" ? "/dashboard" : undefined,
+      });
+
+      if (result?.error) {
+        setGlobalError(result.error);
+        return;
+      }
+
+      if (initialFlow !== "login") {
+        setGlobalSuccess("Sesion iniciada. Ahora ya puedes crear o unirte a un piso.");
+        setShowSetupStep(true);
+        setHomeAction(preferredHomeAction);
+      }
+    });
   };
 
-  const onRegisterSubmit = (_values: RegisterFormValues) => {
-    setShowSetupStep(true);
+  const onRegisterSubmit = (values: RegisterFormValues) => {
+    setGlobalError("");
+    setGlobalSuccess("");
+
+    startTransition(async () => {
+      const result = await signUpWithEmail({
+        email: values.email,
+        password: values.password,
+      });
+
+      if (result?.error) {
+        setGlobalError(result.error);
+        return;
+      }
+
+      setGlobalSuccess("Cuenta creada correctamente. Ahora crea o únete a un piso.");
+      setShowSetupStep(true);
+      setHomeAction(preferredHomeAction);
+    });
   };
 
   const onCreateHomeSubmit = (values: CreateHomeFormValues) => {
-    console.log("Create home submit", values);
+    setGlobalError("");
+    setGlobalSuccess("");
+
+    startTransition(async () => {
+      const result = await createHouseAction(values);
+
+      if (result?.error) {
+        setGlobalError(result.error);
+      }
+    });
   };
 
   const onJoinHomeSubmit = (values: JoinHomeFormValues) => {
-    console.log("Join home submit", values);
+    setGlobalError("");
+    setGlobalSuccess("");
+
+    startTransition(async () => {
+      const result = await joinHouseAction(values);
+
+      if (result?.error) {
+        setGlobalError(result.error);
+      }
+    });
   };
 
   if (showSetupStep) {
@@ -128,15 +186,18 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                 className={`${styles.modeTab} ${
                   homeAction === "create" ? styles.modeTabActive : ""
                 }`.trim()}
+                disabled={isPending}
               >
                 Crear piso
               </button>
+
               <button
                 type="button"
                 onClick={() => setHomeAction("join")}
                 className={`${styles.modeTab} ${
                   homeAction === "join" ? styles.modeTabActive : ""
                 }`.trim()}
+                disabled={isPending}
               >
                 Unirse a un piso
               </button>
@@ -146,6 +207,9 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
         </div>
 
         <div className={styles.panel}>
+          {globalError ? <p className={styles.error}>{globalError}</p> : null}
+          {globalSuccess ? <p className={styles.success}>{globalSuccess}</p> : null}
+
           {homeAction === "create" ? (
             <form
               className={styles.form}
@@ -165,11 +229,14 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                     type="text"
                     className={styles.input}
                     placeholder="Nombre"
+                    disabled={isPending}
                     {...createHomeForm.register("name")}
                   />
                 </div>
                 {createHomeForm.formState.errors.name && (
-                  <p className={styles.error}>{createHomeForm.formState.errors.name.message}</p>
+                  <p className={styles.error}>
+                    {createHomeForm.formState.errors.name.message}
+                  </p>
                 )}
               </div>
 
@@ -187,25 +254,32 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                     inputMode="numeric"
                     className={styles.input}
                     placeholder="Nº de personas en el piso"
+                    disabled={isPending}
                     {...createHomeForm.register("people")}
                   />
                 </div>
                 {createHomeForm.formState.errors.people && (
-                  <p className={styles.error}>{createHomeForm.formState.errors.people.message}</p>
+                  <p className={styles.error}>
+                    {createHomeForm.formState.errors.people.message}
+                  </p>
                 )}
               </div>
 
-              <Button type="submit" className={styles.submit}>
-                Entrar
+              <Button type="submit" className={styles.submit} disabled={isPending}>
+                {isPending ? "Creando..." : "Entrar"}
               </Button>
             </form>
           ) : (
-            <form className={styles.form} onSubmit={joinHomeForm.handleSubmit(onJoinHomeSubmit)} noValidate>
+            <form
+              className={styles.form}
+              onSubmit={joinHomeForm.handleSubmit(onJoinHomeSubmit)}
+              noValidate
+            >
               <div className={styles.field}>
                 <div className={styles.inputWrap}>
                   <Image
                     src="/iconos/building-svgrepo-com 1.svg"
-                    alt="Icono de codigo"
+                    alt="Icono de código"
                     width={16}
                     height={16}
                     className={`${styles.icon} ${styles.setupIcon}`}
@@ -215,16 +289,19 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                     inputMode="numeric"
                     className={styles.input}
                     placeholder="Código"
+                    disabled={isPending}
                     {...joinHomeForm.register("code")}
                   />
                 </div>
                 {joinHomeForm.formState.errors.code && (
-                  <p className={styles.error}>{joinHomeForm.formState.errors.code.message}</p>
+                  <p className={styles.error}>
+                    {joinHomeForm.formState.errors.code.message}
+                  </p>
                 )}
               </div>
 
-              <Button type="submit" className={styles.submit}>
-                Unirme
+              <Button type="submit" className={styles.submit} disabled={isPending}>
+                {isPending ? "Uniéndome..." : "Unirme"}
               </Button>
             </form>
           )}
@@ -235,7 +312,7 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
 
   return (
     <div className={styles.card}>
-      <Tabs defaultValue="login">
+      <Tabs defaultValue={initialFlow === "login" ? "login" : "register"}>
         <div className={styles.top}>
           <div className={styles.tabsShell}>
             <TabsList className={styles.tabs}>
@@ -251,6 +328,9 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
         </div>
 
         <div className={styles.panel}>
+          {globalError ? <p className={styles.error}>{globalError}</p> : null}
+          {globalSuccess ? <p className={styles.success}>{globalSuccess}</p> : null}
+
           <TabsContent value="login">
             <form
               className={styles.form}
@@ -271,11 +351,14 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                     className={styles.input}
                     placeholder="Correo"
                     autoComplete="email"
+                    disabled={isPending}
                     {...loginForm.register("email")}
                   />
                 </div>
                 {loginForm.formState.errors.email && (
-                  <p className={styles.error}>{loginForm.formState.errors.email.message}</p>
+                  <p className={styles.error}>
+                    {loginForm.formState.errors.email.message}
+                  </p>
                 )}
               </div>
 
@@ -293,20 +376,23 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                     className={styles.input}
                     placeholder="Contraseña"
                     autoComplete="current-password"
+                    disabled={isPending}
                     {...loginForm.register("password")}
                   />
                 </div>
                 {loginForm.formState.errors.password && (
-                  <p className={styles.error}>{loginForm.formState.errors.password.message}</p>
+                  <p className={styles.error}>
+                    {loginForm.formState.errors.password.message}
+                  </p>
                 )}
               </div>
 
-              <button type="button" className={styles.forgot}>
+              <button type="button" className={styles.forgot} disabled={isPending}>
                 ¿Olvidaste tu contraseña?
               </button>
 
-              <Button type="submit" className={styles.submit}>
-                Entrar
+              <Button type="submit" className={styles.submit} disabled={isPending}>
+                {isPending ? "Entrando..." : "Entrar"}
               </Button>
             </form>
           </TabsContent>
@@ -331,11 +417,14 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                     className={styles.input}
                     placeholder="Correo"
                     autoComplete="email"
+                    disabled={isPending}
                     {...registerForm.register("email")}
                   />
                 </div>
                 {registerForm.formState.errors.email && (
-                  <p className={styles.error}>{registerForm.formState.errors.email.message}</p>
+                  <p className={styles.error}>
+                    {registerForm.formState.errors.email.message}
+                  </p>
                 )}
               </div>
 
@@ -353,11 +442,14 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                     className={styles.input}
                     placeholder="Contraseña"
                     autoComplete="new-password"
+                    disabled={isPending}
                     {...registerForm.register("password")}
                   />
                 </div>
                 {registerForm.formState.errors.password && (
-                  <p className={styles.error}>{registerForm.formState.errors.password.message}</p>
+                  <p className={styles.error}>
+                    {registerForm.formState.errors.password.message}
+                  </p>
                 )}
               </div>
 
@@ -375,6 +467,7 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                     className={styles.input}
                     placeholder="Verificar contraseña"
                     autoComplete="new-password"
+                    disabled={isPending}
                     {...registerForm.register("confirmPassword")}
                   />
                 </div>
@@ -385,8 +478,8 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                 )}
               </div>
 
-              <Button type="submit" className={styles.submit}>
-                Siguiente
+              <Button type="submit" className={styles.submit} disabled={isPending}>
+                {isPending ? "Creando cuenta..." : "Siguiente"}
               </Button>
             </form>
           </TabsContent>

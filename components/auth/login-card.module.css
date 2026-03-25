@@ -205,3 +205,9 @@
     row-gap: 10px;
   }
 }
+
+.success {
+  color: #15803d;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
