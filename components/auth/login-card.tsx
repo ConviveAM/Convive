@@ -52,7 +52,7 @@ const joinHomeSchema = z.object({
   code: z
     .string()
     .min(1, "El código es obligatorio")
-    .regex(/^\d+$/, "Introduce solo números"),
+    .regex(/^[a-zA-Z0-9]+$/, "Introduce solo letras y números"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -286,7 +286,6 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                   />
                   <Input
                     type="text"
-                    inputMode="numeric"
                     className={styles.input}
                     placeholder="Código"
                     disabled={isPending}
