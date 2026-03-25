@@ -33,10 +33,10 @@ export async function signInWithEmail({
   email,
   password,
   redirectTo,
-}: AuthPayload & { redirectTo?: string }) {
+}: AuthPayload & { redirectTo?: string | null }) {
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -45,9 +45,9 @@ export async function signInWithEmail({
     return { error: error.message };
   }
 
-  if (redirectTo) {
-    redirect(redirectTo);
+  if (redirectTo === null) {
+    return { success: true, userId: data.user.id };
   }
 
-  return { success: true };
+  redirect(redirectTo ?? `/dashboard/profile/${data.user.id}`);
 }

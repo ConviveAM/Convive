@@ -1,8 +1,16 @@
-export default function DashboardPage() {
-  return (
-    <main style={{ padding: "2rem" }}>
-      <h1>Dashboard general</h1>
-      <p>Has iniciado sesion correctamente.</p>
-    </main>
-  );
+import { redirect } from "next/navigation";
+
+import { createClient } from "../../utils/supabase/server";
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  redirect(`/dashboard/profile/${user.id}`);
 }

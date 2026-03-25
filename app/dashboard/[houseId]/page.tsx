@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { createClient } from "../../../utils/supabase/server";
 
 type HouseDashboardPageProps = {
@@ -19,7 +21,7 @@ export default async function HouseDashboardPage({
   if (!user) {
     return (
       <main style={{ padding: "2rem" }}>
-        <h1>No hay sesión activa</h1>
+        <h1>No hay sesion activa</h1>
       </main>
     );
   }
@@ -56,16 +58,21 @@ export default async function HouseDashboardPage({
 
   return (
     <main style={{ padding: "2rem" }}>
+      <Link href={`/dashboard/profile/${user.id}`}>Volver a mi perfil</Link>
       <h1>Dashboard del piso</h1>
-      <p><strong>Nombre:</strong> {house.name}</p>
-      <p><strong>Código del piso:</strong> {house.public_code}</p>
+      <p>
+        <strong>Nombre:</strong> {house.name}
+      </p>
+      <p>
+        <strong>Codigo del piso:</strong> {house.public_code}
+      </p>
 
       <h2 style={{ marginTop: "2rem" }}>Miembros del piso</h2>
 
       {membersError ? (
         <pre>{JSON.stringify(membersError, null, 2)}</pre>
       ) : !members?.length ? (
-        <p>No hay miembros en este piso todavía.</p>
+        <p>No hay miembros en este piso todavia.</p>
       ) : (
         <ul>
           {members.map((member) => {
@@ -78,7 +85,7 @@ export default async function HouseDashboardPage({
                 {profile?.full_name?.trim()
                   ? profile.full_name
                   : profile?.email ?? member.profile_id}
-                {" — "}
+                {" - "}
                 {member.role}
               </li>
             );

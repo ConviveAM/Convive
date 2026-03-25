@@ -111,7 +111,7 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
     startTransition(async () => {
       const result = await signInWithEmail({
         ...values,
-        redirectTo: initialFlow === "login" ? "/dashboard" : undefined,
+        redirectTo: initialFlow === "login" ? undefined : null,
       });
 
       if (result?.error) {
@@ -287,7 +287,7 @@ export function LoginCard({ initialFlow = "login" }: LoginCardProps) {
                   <Input
                     type="text"
                     className={styles.input}
-                    placeholder="Código"
+                    placeholder="Código de invitación"
                     disabled={isPending}
                     {...joinHomeForm.register("code")}
                   />

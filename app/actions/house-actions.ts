@@ -48,3 +48,42 @@ export async function joinHouseAction(formData: { code: string }) {
 
   redirect(`/dashboard/${data}`);
 }
+
+export async function createHouseFromFormAction(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const result = await createHouseAction({
+    name: String(formData.get("name") ?? "").trim(),
+    people: String(formData.get("people") ?? "").trim(),
+  });
+
+  if (result?.error) {
+    redirect(`/dashboard/profile/${user.id}?error=${encodeURIComponent(result.error)}`);
+  }
+}
+
+export async function joinHouseFromFormAction(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const result = await joinHouseAction({
+    code: String(formData.get("code") ?? "").trim(),
+  });
+
+  if (result?.error) {
+    redirect(`/dashboard/profile/${user.id}?error=${encodeURIComponent(result.error)}`);
+  }
+}
