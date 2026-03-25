@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
@@ -14,7 +14,7 @@ export default function HomePage() {
         <div className="landing-hero__grid">
           <div className="landing-hero__top-actions">
             <Link href="/login?flow=create" className="convive-button">
-              Crear piso
+              Registrarse
             </Link>
             <Link href="/login" className="convive-button">
               Iniciar sesión
@@ -86,7 +86,7 @@ export default function HomePage() {
             </p>
 
             <Link
-              href="/login?flow=join"
+              href="/login"
               className="convive-button landing-hero__button"
             >
               Unirse a un piso
@@ -96,10 +96,10 @@ export default function HomePage() {
       </section>
 
       <section
-        id="landing-section-two"
         className="landing-section-two"
         aria-label="Segunda sección de Convive"
       >
+        <div id="landing-section-two" className="landing-anchor" aria-hidden="true" />
         <div className="landing-section-two__grid">
           <h2 className="landing-section-two__title">
             Compartir piso puede ser todo un reto
@@ -113,7 +113,7 @@ export default function HomePage() {
             href="/login?flow=create"
             className="convive-button landing-section-two__button"
           >
-            Crear piso
+            Registrarse
           </Link>
         </div>
 
@@ -262,10 +262,10 @@ export default function HomePage() {
       </section>
 
       <section
-        id="landing-section-four"
         className="landing-section-four"
         aria-label="Cuarta sección de Convive"
       >
+        <div id="landing-section-four" className="landing-anchor" aria-hidden="true" />
         <div className="landing-section-two__grid landing-section-four__grid">
           <h2 className="landing-section-two__title">
             Todo lo que necesita tu piso, en un solo lugar
@@ -276,7 +276,7 @@ export default function HomePage() {
             nace para eliminar esa carga.
           </p>
           <Link
-            href="/login?flow=join"
+            href="/login"
             className="convive-button landing-section-two__button"
           >
             Unirme a un piso
@@ -328,10 +328,10 @@ export default function HomePage() {
       </section>
 
       <section
-        id="landing-section-five"
         className="landing-section-five"
         aria-label="Quinta sección de Convive"
       >
+        <div id="landing-section-five" className="landing-anchor" aria-hidden="true" />
         <div className="landing-section-five__grid">
           <div className="landing-section-five__content">
             <h2 className="landing-section-five__title">
@@ -339,17 +339,11 @@ export default function HomePage() {
             </h2>
             <div className="landing-section-five__actions">
               <Link href="/login?flow=create" className="convive-button">
-                Crear piso
+                Registrarse
               </Link>
               <Link href="/login" className="convive-button">
                 Iniciar sesión
-              </Link>
-              <Link
-                href="/login?flow=join"
-                className="convive-button landing-section-five__action-bottom"
-              >
-                Unirse a un piso
-              </Link>
+              </Link>
             </div>
           </div>
         </div>
@@ -400,3 +394,5 @@ export default function HomePage() {
     </main>
   );
 }
+
+
