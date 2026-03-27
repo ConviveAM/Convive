@@ -911,7 +911,7 @@ main {
     width: min(1700px, 100%);
   }
 
-  .landing-section-two__grid {
+  .landing-section-two .landing-section-two__grid {
     padding: 0 1.25rem;
     align-content: center;
   }
@@ -1006,6 +1006,11 @@ main {
 
   .landing-section-four__grid .landing-section-two__button {
     margin-top: 1.2rem;
+  }
+
+  .landing-section-four .landing-section-two__grid {
+    padding: clamp(4.5rem, 9vh, 7rem) 1.25rem 0;
+    align-content: start;
   }
 
   .landing-section-four__grid .landing-section-two__title,
