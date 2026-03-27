@@ -911,6 +911,11 @@ main {
     width: min(1700px, 100%);
   }
 
+  .landing-section-two__grid {
+    padding: 0 1.25rem;
+    align-content: center;
+  }
+
   .landing-hero__bottom-card {
     width: clamp(245px, 14vw, 300px);
     min-height: clamp(170px, 21vh, 250px);
@@ -961,7 +966,17 @@ main {
   }
 
   .landing-section-two__title,
-  .landing-section-two__text,
+  .landing-section-two__text {
+    text-align: left;
+    justify-self: start;
+    grid-column: 5 / span 7;
+  }
+
+  .landing-section-two__button {
+    grid-column: 5 / span 3;
+    justify-self: start;
+  }
+
   .landing-section-five__title {
     text-align: center;
     justify-self: center;
