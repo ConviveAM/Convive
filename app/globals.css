@@ -1007,6 +1007,16 @@ main {
   .landing-section-four__grid .landing-section-two__button {
     margin-top: 1.2rem;
   }
+
+  .landing-section-four__grid .landing-section-two__title,
+  .landing-section-four__grid .landing-section-two__text {
+    justify-self: center;
+    text-align: center;
+  }
+
+  .landing-section-four__grid .landing-section-two__button {
+    justify-self: center;
+  }
 }
 
 @media (max-width: 768px) {
