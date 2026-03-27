@@ -1015,12 +1015,14 @@ main {
 
   .landing-section-four__grid .landing-section-two__title,
   .landing-section-four__grid .landing-section-two__text {
-    justify-self: center;
-    text-align: center;
+    grid-column: 2 / span 8;
+    justify-self: start;
+    text-align: left;
   }
 
   .landing-section-four__grid .landing-section-two__button {
-    justify-self: center;
+    grid-column: 2 / span 8;
+    justify-self: start;
   }
 }
 
