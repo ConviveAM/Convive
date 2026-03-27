@@ -959,6 +959,7 @@ main {
     max-width: 64rem;
     text-align: left;
     font-size: clamp(1.9rem, 1.55vw, 2.35rem);
+    line-height: 1.34;
     margin-top: 0.35rem;
   }
 
