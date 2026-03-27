@@ -912,16 +912,17 @@ main {
   }
 
   .landing-hero__content {
-    grid-column: 2 / span 9;
+    grid-column: 2 / span 7;
   }
 
   .landing-hero__brandline {
-    grid-column: 1 / span 9;
-    align-items: center;
+    grid-column: 1 / span 7;
+    align-items: flex-start;
+    text-align: left;
   }
 
   .landing-hero__brandline-top {
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .landing-hero__logo {
@@ -933,16 +934,16 @@ main {
   }
 
   .landing-hero__text {
-    grid-column: 1 / span 9;
-    justify-self: center;
+    grid-column: 1 / span 7;
+    justify-self: start;
     max-width: 64rem;
-    text-align: center;
+    text-align: left;
     font-size: clamp(1.9rem, 1.55vw, 2.35rem);
   }
 
   .landing-hero__button {
-    grid-column: 1 / span 9;
-    justify-self: center;
+    grid-column: 1 / span 7;
+    justify-self: start;
   }
 
   .landing-section-two__title,
