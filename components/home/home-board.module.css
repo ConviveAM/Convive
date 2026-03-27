@@ -233,3 +233,17 @@
     min-height: 105px;
   }
 }
+
+@media (min-width: 1536px) {
+  .logo {
+    width: clamp(260px, 20vw, 360px);
+  }
+
+  .menu {
+    font-size: 32px;
+  }
+
+  .menuIcon {
+    width: clamp(28px, 2.4vw, 36px);
+  }
+}
