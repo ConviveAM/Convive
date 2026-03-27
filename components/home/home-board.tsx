@@ -1,5 +1,6 @@
 import Image from "next/image";
 import styles from "./home-board.module.css";
+import { PaymentStatusChart } from "./payment-status-chart";
 
 type HomeBoardProps = {
   houseName: string;
@@ -31,18 +32,10 @@ export function HomeBoard({ houseName, memberCount }: HomeBoardProps) {
               className={`${styles.tile} ${styles.tileWide} ${styles.tilePayments} ${styles.tileTop}`}
             >
               <h2 className={styles.title}>Pagos del mes</h2>
-              <div className={styles.progress} aria-hidden="true">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <span
-                    key={index}
-                    className={`${styles.bar} ${
-                      index < Math.ceil((verifiedPayments / totalPayments) * 6)
-                        ? styles.barActive
-                        : ""
-                    }`.trim()}
-                  />
-                ))}
-              </div>
+              <PaymentStatusChart
+                verifiedPayments={verifiedPayments}
+                totalPayments={totalPayments}
+              />
               <p className={styles.meta}>
                 {verifiedPayments} de {totalPayments} pagos verificados
               </p>
