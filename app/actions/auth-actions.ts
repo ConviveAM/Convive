@@ -51,3 +51,9 @@ export async function signInWithEmail({
 
   redirect(redirectTo ?? "/dashboard");
 }
+
+export async function signOutAction() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/login");
+}

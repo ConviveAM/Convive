@@ -62,5 +62,11 @@ export default async function HouseDashboardPage({
     );
   }
 
-  return <HomeBoard houseName={house.name} memberCount={members?.length ?? 0} />;
+  return (
+    <HomeBoard
+      houseCode={house.public_code}
+      houseName={house.name}
+      memberCount={members?.length ?? 0}
+    />
+  );
 }

@@ -1,13 +1,15 @@
 import Image from "next/image";
+import Link from "next/link";
 import styles from "./home-board.module.css";
 import { PaymentStatusChart } from "./payment-status-chart";
 
 type HomeBoardProps = {
+  houseCode: string;
   houseName: string;
   memberCount: number;
 };
 
-export function HomeBoard({ houseName, memberCount }: HomeBoardProps) {
+export function HomeBoard({ houseCode, houseName, memberCount }: HomeBoardProps) {
   const totalPayments = Math.max(memberCount + 6, 8);
   const verifiedPayments = Math.max(totalPayments - 3, 1);
   const pendingPayments = totalPayments - verifiedPayments;
@@ -65,7 +67,7 @@ export function HomeBoard({ houseName, memberCount }: HomeBoardProps) {
         </div>
       </section>
 
-      <button type="button" className={styles.menu}>
+      <Link href={`/dashboard/${houseCode}/menu`} className={styles.menu}>
         <Image
           src="/iconos/Iconopuerta.svg"
           alt="Menú"
@@ -74,7 +76,7 @@ export function HomeBoard({ houseName, memberCount }: HomeBoardProps) {
           className={styles.menuIcon}
         />
         <span>Menú</span>
-      </button>
+      </Link>
     </main>
   );
 }
