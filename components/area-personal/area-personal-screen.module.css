@@ -1,0 +1,391 @@
+.page {
+  min-height: 100svh;
+  background-image: url("/images/Area-personal/areapersonal.webp");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  padding: clamp(0.9rem, 1.8vw, 1.5rem);
+  display: grid;
+  justify-items: center;
+  align-items: center;
+}
+
+.panel {
+  width: calc(100% * 7 / 12);
+  max-width: 980px;
+  background: rgba(240, 234, 228, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  border: none;
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+}
+
+.header {
+  background: #8b1a2f;
+  color: #f0eae4;
+  padding: 1.05rem 0.95rem;
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  align-items: center;
+}
+
+.backLink {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+}
+
+.backIcon {
+  width: 44px;
+  height: 44px;
+}
+
+.headerCenter {
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 25px;
+  font-weight: 700;
+  color: #f0eae4;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 0.3rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #f0eae4;
+}
+
+.content {
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.summaryCard {
+  background: #8b1a2f;
+  color: #f0eae4;
+  border-radius: 6px;
+  padding: 0.62rem 0.6rem 0.72rem;
+  min-height: 136px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.summaryTitle {
+  margin: 0;
+  border-bottom: 1px solid rgba(240, 234, 228, 0.6);
+  padding-bottom: 0.25rem;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: clamp(1rem, 1.25vw, 1.2rem);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.summaryValue {
+  margin: 1.08rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(1.6rem, 2.2vw, 2.1rem);
+  line-height: 1;
+  font-weight: 600;
+}
+
+.summaryMeta {
+  margin: 0;
+  padding-top: 1.14rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.sectionCard {
+  border-radius: 6px;
+  background: #f0ebe6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  padding: 1rem 1rem 1.15rem;
+}
+
+.sectionHeader {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.rows {
+  margin-top: 0.78rem;
+  display: grid;
+  gap: 0.92rem;
+}
+
+.debtsRows {
+  --debt-row-height: 50px;
+  max-height: calc((var(--debt-row-height) * 2) + 0.32rem);
+  overflow-y: auto;
+  padding-right: 0;
+  gap: 0.32rem;
+  scrollbar-width: thin;
+  scrollbar-color: #8b1a2f transparent;
+  scrollbar-gutter: stable;
+  margin-right: -0.08rem;
+}
+
+.debtsRows .row {
+  min-height: var(--debt-row-height);
+  padding-right: 0.35rem;
+}
+
+.debtsRows::-webkit-scrollbar {
+  width: 12px;
+}
+
+.debtsRows::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.debtsRows::-webkit-scrollbar-thumb {
+  background: #8b1a2f;
+  border-radius: 999px;
+}
+
+.debtsRows::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1.35rem;
+}
+
+.person {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.avatar {
+  border-radius: 999px;
+}
+
+.personLine {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  color: #1f1a17;
+  font-size: clamp(0.8rem, 1vw, 0.92rem);
+  line-height: 1.25;
+}
+
+.personSub {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  color: #5a5652;
+  font-size: clamp(0.68rem, 0.84vw, 0.78rem);
+  line-height: 1.2;
+}
+
+.amount {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(1.35rem, 1.65vw, 1.7rem);
+  font-weight: 600;
+  margin-right: 0.55rem;
+}
+
+.actionButton {
+  background: #be6f8b;
+  color: #f0eae4;
+  border-radius: 8px;
+  padding: 0.58rem 0.78rem;
+  font-size: clamp(0.66rem, 0.8vw, 0.74rem);
+  line-height: 1;
+}
+
+.historyTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.viewAll {
+  font-family: var(--font-montserrat), sans-serif;
+  color: #8b1a2f;
+  text-decoration: none;
+  font-size: clamp(0.7rem, 0.85vw, 0.8rem);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.historyAmount {
+  margin: 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(0.82rem, 1vw, 0.92rem);
+}
+
+.historyButton {
+  background: #be6f8b;
+  color: #f0eae4;
+  border-radius: 8px;
+  padding: 0.58rem 0.78rem;
+  font-size: clamp(0.66rem, 0.8vw, 0.74rem);
+  line-height: 1;
+}
+
+.bottomGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.bottomCardMaroon {
+  background: #8b1a2f;
+  color: #f0eae4;
+  border-radius: 6px;
+  padding: 0.48rem 0.55rem 0.58rem;
+}
+
+.calendarTitle {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: clamp(1.05rem, 1.2vw, 1.2rem);
+  font-weight: 700;
+}
+
+.calendar {
+  margin-top: 0.28rem;
+  display: grid;
+  justify-content: center;
+}
+
+.calendar :global(.rdp) {
+  --rdp-day-height: 24px;
+  --rdp-day-width: 24px;
+  --rdp-accent-color: #f0eae4;
+  --rdp-background-color: rgba(240, 234, 228, 0.18);
+  --rdp-accent-color-dark: #f0eae4;
+  --rdp-background-color-dark: rgba(240, 234, 228, 0.18);
+  margin: 0;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+}
+
+.calendar :global(.rdp-month_caption),
+.calendar :global(.rdp-nav) {
+  display: none;
+}
+
+.calendar :global(.rdp-weekday) {
+  font-size: 0.62rem;
+  color: #f0eae4;
+  font-weight: 500;
+}
+
+.calendar :global(.rdp-day) {
+  color: #f0eae4;
+  font-size: 0.68rem;
+  border-radius: 6px;
+}
+
+.calendar :global(.rdp-today:not(.rdp-outside)) {
+  color: #8b1a2f;
+  background: #f0eae4;
+}
+
+.pieTitle {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: clamp(1rem, 1.2vw, 1.2rem);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pieWrap {
+  margin-top: 0.35rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.42rem;
+  align-items: center;
+}
+
+.pieLegend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(0.72rem, 0.9vw, 0.82rem);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+@media (max-width: 900px) {
+  .panel {
+    width: min(100%, 650px);
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .bottomGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    align-items: start;
+  }
+
+  .panel {
+    margin-top: 0.4rem;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 0.35rem;
+  }
+}

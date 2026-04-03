@@ -1,0 +1,233 @@
+.page {
+  min-height: 100svh;
+  background-image: url("/images/Area-personal/areapersonal.webp");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  padding: clamp(0.9rem, 1.8vw, 1.5rem);
+  display: grid;
+  place-items: center;
+}
+
+.panel {
+  width: calc(100% * 7 / 12);
+  max-width: 980px;
+  background: rgba(240, 234, 228, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  border: none;
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+}
+
+.header {
+  background: #8b1a2f;
+  color: #f0eae4;
+  padding: 1.05rem 0.95rem;
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  align-items: center;
+}
+
+.backLink {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+}
+
+.backIcon {
+  width: 44px;
+  height: 44px;
+}
+
+.headerCenter {
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 25px;
+  font-weight: 700;
+  color: #f0eae4;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 0.3rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #f0eae4;
+}
+
+.content {
+  padding: 1rem;
+}
+
+.historyCard {
+  border-radius: 6px;
+  background: #f0ebe6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  padding: 1rem 1.1rem;
+}
+
+.historyTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.historyTitleWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.inlineBack {
+  color: #8b1a2f;
+  text-decoration: none;
+  font-family: "Poppins", sans-serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.historyTitle {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.searchWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.searchInput {
+  width: 140px;
+  height: 28px;
+  border: 2px solid #8b1a2f;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0 0.55rem;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+  outline: none;
+}
+
+.searchIcon {
+  color: #8b1a2f;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.itemsWrap {
+  margin-top: 0.85rem;
+  max-height: min(58vh, 620px);
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.monthBlock + .monthBlock {
+  margin-top: 1rem;
+}
+
+.monthTitle {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.monthRows {
+  margin-top: 0.45rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.itemRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.itemLeft {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 0.45rem;
+  align-items: start;
+}
+
+.itemTitle {
+  margin: 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.itemSub {
+  margin: 0.07rem 0 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.itemDate {
+  margin: 0.05rem 0 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.actionButton {
+  background: #be6f8b;
+  color: #f0eae4;
+  border-radius: 8px;
+  padding: 0.58rem 0.95rem;
+  font-size: 12px;
+  line-height: 1;
+}
+
+@media (max-width: 900px) {
+  .panel {
+    width: min(100%, 650px);
+  }
+
+  .historyTitle {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    align-items: start;
+  }
+
+  .historyTop {
+    flex-wrap: wrap;
+    align-items: start;
+  }
+
+  .searchInput {
+    width: 120px;
+  }
+
+  .itemRow {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+}
