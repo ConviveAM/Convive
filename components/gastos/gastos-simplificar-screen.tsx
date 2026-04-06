@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import styles from "./gastos-simplificar-screen.module.css";
 
@@ -75,7 +74,9 @@ export function GastosSimplificarScreen({ houseCode }: GastosSimplificarScreenPr
                       </>
                     ) : null}
                   </div>
-                  <Button className={styles.button}>Optimizar</Button>
+                  <Link href={`/dashboard/${houseCode}/gastos/simplificar/pago-simplificado`} className={`convive-button ${styles.button}`}>
+                    Optimizar
+                  </Link>
                 </div>
               ))}
             </div>
@@ -85,4 +86,3 @@ export function GastosSimplificarScreen({ houseCode }: GastosSimplificarScreenPr
     </main>
   );
 }
-

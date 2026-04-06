@@ -49,7 +49,9 @@ export function GastosScreen({ houseCode }: GastosScreenProps) {
           <Card className={styles.maroonSection}>
             <div className={styles.sectionTop}>
               <div className={styles.sectionTitleWrap}>
-                <Image src="/iconos/Añadir.svg" alt="" width={16} height={16} className={styles.plusIcon} />
+                <Link href={`/dashboard/${houseCode}/gastos/anadir-ticket`} className={styles.plusLink} aria-label="Añadir ticket">
+                  <Image src="/iconos/Añadir.svg" alt="" width={16} height={16} className={styles.plusIcon} />
+                </Link>
                 <h2 className={styles.sectionTitle}>Tickets de compra</h2>
               </div>
               <Link href={`/dashboard/${houseCode}/gastos/tickets`} className={styles.viewAll}>
@@ -131,7 +133,12 @@ export function GastosScreen({ houseCode }: GastosScreenProps) {
                     Julian
                   </span>
                 </div>
-                <Button className={styles.actionButton}>Optimizar</Button>
+                <Link
+                  href={`/dashboard/${houseCode}/gastos/simplificar/pago-simplificado`}
+                  className={`convive-button ${styles.actionButton}`}
+                >
+                  Optimizar
+                </Link>
               </div>
 
               <div className={styles.payRow}>
@@ -148,7 +155,12 @@ export function GastosScreen({ houseCode }: GastosScreenProps) {
                     Marc
                   </span>
                 </div>
-                <Button className={styles.actionButton}>Optimizar</Button>
+                <Link
+                  href={`/dashboard/${houseCode}/gastos/simplificar/pago-simplificado`}
+                  className={`convive-button ${styles.actionButton}`}
+                >
+                  Optimizar
+                </Link>
               </div>
             </div>
           </Card>

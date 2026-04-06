@@ -1,0 +1,82 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
+import styles from "./facturas-screen.module.css";
+
+type FacturasScreenProps = {
+  houseCode: string;
+};
+
+const sections = [
+  { key: "alquiler", title: "Alquiler", text: "Factura de el alquiler", date: "15 de Mayo" },
+  { key: "suscripciones", title: "Suscripciones", text: "Factura de netflix", date: "15 de Mayo" },
+  { key: "wifi", title: "Wifi", text: "Factura de el wifi", date: "15 de Mayo" },
+  { key: "agua", title: "Agua", text: "Factura de el agua", date: "15 de Mayo" },
+  { key: "luz", title: "Luz", text: "Factura de la luz", date: "15 de Mayo" },
+];
+
+export function FacturasScreen({ houseCode }: FacturasScreenProps) {
+  return (
+    <main className={styles.page}>
+      <section className={styles.panel}>
+        <header className={styles.header}>
+          <Link href={`/dashboard/${houseCode}/menu`} className={styles.backLink}>
+            <Image src="/iconos/flechaatras.svg" alt="Volver" width={20} height={20} className={styles.backIcon} />
+          </Link>
+          <div className={styles.headerCenter}>
+            <h1 className={styles.title}>Facturas</h1>
+            <p className={styles.subtitle}>Gestiona las facturas del piso de forma clara</p>
+          </div>
+          <span className={styles.headerPlus}>+</span>
+        </header>
+
+        <div className={styles.content}>
+          {sections.map((section) => (
+            <Card key={section.key} className={styles.group}>
+              <div className={styles.groupTop}>
+                <div className={styles.groupTitleWrap}>
+                  <h2 className={styles.groupTitle}>{section.title}</h2>
+                </div>
+                <Link
+                  href={
+                    section.key === "alquiler"
+                      ? `/dashboard/${houseCode}/facturas/alquiler`
+                      : section.key === "suscripciones"
+                        ? `/dashboard/${houseCode}/facturas/suscripciones`
+                        : section.key === "wifi"
+                          ? `/dashboard/${houseCode}/facturas/wifi`
+                          : section.key === "agua"
+                            ? `/dashboard/${houseCode}/facturas/agua`
+                            : section.key === "luz"
+                              ? `/dashboard/${houseCode}/facturas/luz`
+                      : `/dashboard/${houseCode}/facturas`
+                  }
+                  className={styles.viewAll}
+                >
+                  Ver todo &gt;
+                </Link>
+              </div>
+
+              <Card className={styles.paper}>
+                <div className={styles.paperRow}>
+                  <div className={styles.left}>
+                    <Image src="/iconos/building-2-svgrepo-com 1.svg" alt="" width={20} height={20} />
+                    <div>
+                      <p className={styles.mainText}>{section.text}</p>
+                      <p className={styles.dateText}>{section.date}</p>
+                    </div>
+                  </div>
+                  <p className={styles.amount}>23€</p>
+                  <Button className={styles.actionButton}>Ver factura</Button>
+                </div>
+              </Card>
+            </Card>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}

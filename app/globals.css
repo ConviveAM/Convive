@@ -7,6 +7,61 @@
   box-sizing: border-box;
 }
 
+.convive-calendar {
+  --rdp-day-height: 34px;
+  --rdp-day-width: 34px;
+  --rdp-accent-color: #8b1a2f;
+  --rdp-background-color: rgba(139, 26, 47, 0.12);
+  margin: 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+}
+
+.convive-calendar .rdp-months {
+  margin: 0;
+}
+
+.convive-calendar .rdp-month {
+  margin: 0;
+}
+
+.convive-calendar .rdp-nav_button {
+  width: 30px;
+  height: 30px;
+  color: #1f1a17;
+}
+
+.convive-calendar .rdp-caption_label {
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.convive-calendar .rdp-dropdown {
+  border: 1px solid #d8d0cb;
+  border-radius: 6px;
+  padding: 0.1rem 0.28rem;
+  background: #fff;
+  color: #1f1a17;
+  font-size: 12px;
+}
+
+.convive-calendar .rdp-weekday {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6d6762;
+}
+
+.convive-calendar .rdp-day {
+  border-radius: 8px;
+}
+
+.convive-calendar .rdp-selected .rdp-day_button {
+  background: #8b1a2f;
+  color: #f0eae4;
+}
+
 html,
 body {
   margin: 0;
