@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -53,7 +53,7 @@ export function GastosDivisionScreen({ houseCode }: GastosDivisionScreenProps) {
             <div className={styles.cardTop}>
               <div className={styles.titleWrap}>
                 <Link href={`/dashboard/${houseCode}/gastos`} className={styles.inlineBack} aria-label="Volver a gastos">
-                  ←
+                  <Image src="/iconos/flechaatras.svg" alt="" width={42} height={42} />
                 </Link>
                 <h2 className={styles.cardTitle}>Division de gastos</h2>
               </div>
@@ -92,4 +92,8 @@ export function GastosDivisionScreen({ houseCode }: GastosDivisionScreenProps) {
     </main>
   );
 }
+
+
+
+
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -41,13 +41,13 @@ export function GastosPagoSimplificadoScreen({ houseCode }: GastosPagoSimplifica
                   Laura
                 </span>
                 <span className={styles.amount}>23€</span>
-                <Image src="/iconos/flechapagos.svg" alt="" width={18} height={18} />
+                <Image src="/iconos/flechaderecha.svg" alt="" width={16} height={16} />
                 <span className={styles.personTag}>
                   <Image src="/images/IconoperfilH.webp" alt="" width={22} height={22} />
                   Marc
                 </span>
                 <span className={styles.amount}>23€</span>
-                <Image src="/iconos/flechapagos.svg" alt="" width={18} height={18} />
+                <Image src="/iconos/flechaderecha.svg" alt="" width={16} height={16} />
                 <span className={styles.personTag}>
                   <Image src="/images/IconoperfilH.webp" alt="" width={22} height={22} />
                   Julian
@@ -63,7 +63,7 @@ export function GastosPagoSimplificadoScreen({ houseCode }: GastosPagoSimplifica
                   Laura
                 </span>
                 <span className={styles.amount}>23€</span>
-                <Image src="/iconos/flechapagos.svg" alt="" width={18} height={18} />
+                <Image src="/iconos/flechaderecha.svg" alt="" width={16} height={16} />
                 <span className={styles.personTag}>
                   <Image src="/images/IconoperfilH.webp" alt="" width={22} height={22} />
                   Julian
@@ -81,4 +81,7 @@ export function GastosPagoSimplificadoScreen({ houseCode }: GastosPagoSimplifica
     </main>
   );
 }
+
+
+
 

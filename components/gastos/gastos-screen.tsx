@@ -46,19 +46,22 @@ export function GastosScreen({ houseCode }: GastosScreenProps) {
         </header>
 
         <div className={styles.content}>
-          <Card className={styles.maroonSection}>
+          <Card className={`${styles.maroonSection} ${styles.ticketsSection}`}>
             <div className={styles.sectionTop}>
               <div className={styles.sectionTitleWrap}>
                 <Link href={`/dashboard/${houseCode}/gastos/anadir-ticket`} className={styles.plusLink} aria-label="Añadir ticket">
-                  <Image src="/iconos/Añadir.svg" alt="" width={16} height={16} className={styles.plusIcon} />
+                  <Image src="/iconos/A%C3%B1adir.svg" alt="" width={24} height={24} className={styles.plusIcon} />
                 </Link>
                 <h2 className={styles.sectionTitle}>Tickets de compra</h2>
               </div>
               <Link href={`/dashboard/${houseCode}/gastos/tickets`} className={styles.viewAll}>
-                Ver todo &gt;
+                <span className={styles.viewAllContent}>
+                  Ver todo
+                  <Image src="/iconos/flechascalendario.svg" alt="" width={14} height={14} className={styles.viewAllArrow} />
+                </span>
               </Link>
             </div>
-            <Card className={styles.innerPaper}>
+            <Card className={`${styles.innerPaper} ${styles.ticketsPaper}`}>
               {ticketRows.map((row) => (
                 <div key={`${row.person}-${row.concept}`} className={styles.innerRow}>
                   <div className={styles.leftInfo}>
@@ -75,16 +78,20 @@ export function GastosScreen({ houseCode }: GastosScreenProps) {
                 </div>
               ))}
             </Card>
+            <div className={styles.ticketsFooter} aria-hidden="true" />
           </Card>
 
-          <Card className={styles.maroonSection}>
+          <Card className={`${styles.maroonSection} ${styles.divisionSection}`}>
             <div className={styles.sectionTop}>
               <h2 className={styles.sectionTitle}>Division de gastos</h2>
               <Link href={`/dashboard/${houseCode}/gastos/division`} className={styles.viewAll}>
-                Ver todo &gt;
+                <span className={styles.viewAllContent}>
+                  Ver todo
+                  <Image src="/iconos/flechascalendario.svg" alt="" width={14} height={14} className={styles.viewAllArrow} />
+                </span>
               </Link>
             </div>
-            <Card className={styles.innerPaper}>
+            <Card className={`${styles.innerPaper} ${styles.divisionPaper}`}>
               {splitRows.map((row) => (
                 <div key={row.concept} className={styles.innerRow}>
                   <div className={styles.leftInfo}>
@@ -100,6 +107,7 @@ export function GastosScreen({ houseCode }: GastosScreenProps) {
                 </div>
               ))}
             </Card>
+            <div className={styles.divisionFooter} aria-hidden="true" />
           </Card>
 
           <Card className={styles.simpleCard}>
@@ -109,7 +117,10 @@ export function GastosScreen({ houseCode }: GastosScreenProps) {
                 <p className={styles.simpleSub}>Reducir pagos innecesarios entre companeros de piso</p>
               </div>
               <Link href={`/dashboard/${houseCode}/gastos/simplificar`} className={`${styles.viewAll} ${styles.viewAllRed}`}>
-                Ver todo &gt;
+                <span className={styles.viewAllContent}>
+                  Ver todo
+                  <Image src="/iconos/flechascalendario.svg" alt="" width={14} height={14} className={styles.viewAllArrow} />
+                </span>
               </Link>
             </div>
 
@@ -121,13 +132,13 @@ export function GastosScreen({ houseCode }: GastosScreenProps) {
                     Laura
                   </span>
                   <span className={styles.smallAmount}>23€</span>
-                  <Image src="/iconos/flechapagos.svg" alt="" width={18} height={18} />
+                  <Image src="/iconos/flechaderecha.svg" alt="" width={16} height={16} />
                   <span className={styles.personTag}>
                     <Image src="/images/IconoperfilH.webp" alt="" width={16} height={16} />
                     Marc
                   </span>
                   <span className={styles.smallAmount}>23€</span>
-                  <Image src="/iconos/flechapagos.svg" alt="" width={18} height={18} />
+                  <Image src="/iconos/flechaderecha.svg" alt="" width={16} height={16} />
                   <span className={styles.personTag}>
                     <Image src="/images/IconoperfilH.webp" alt="" width={16} height={16} />
                     Julian
@@ -169,3 +180,6 @@ export function GastosScreen({ houseCode }: GastosScreenProps) {
     </main>
   );
 }
+
+
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -44,7 +44,7 @@ export function GastosAddTicketScreen({ houseCode }: GastosAddTicketScreenProps)
           <Card className={styles.card}>
             <div className={styles.cardTop}>
               <Link href={`/dashboard/${houseCode}/gastos`} className={styles.inlineBack} aria-label="Volver a gastos">
-                ←
+                <Image src="/iconos/flechaatras.svg" alt="" width={42} height={42} />
               </Link>
               <h2 className={styles.cardTitle}>Añadir ticket</h2>
             </div>
@@ -52,7 +52,7 @@ export function GastosAddTicketScreen({ houseCode }: GastosAddTicketScreenProps)
             <section className={styles.block}>
               <h3 className={styles.blockTitle}>1 - Escanea el ticket</h3>
               <div className={styles.uploadBox}>
-                <Image src="/iconos/SVGRepo_iconCarrier.svg" alt="Subir imagen" width={34} height={34} />
+                <Image src="/iconos/Escanearimagen.svg" alt="Subir imagen" width={52} height={52} />
               </div>
             </section>
 
@@ -112,7 +112,7 @@ export function GastosAddTicketScreen({ houseCode }: GastosAddTicketScreenProps)
                 <PopoverTrigger asChild>
                   <Button className={styles.dateTrigger}>
                     {formatDate(date)}
-                    <span className={styles.dateArrow}>⌄</span>
+                    <Image src="/iconos/flechascalendario.svg" alt="" width={14} height={14} className={styles.dateArrow} />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className={styles.calendarPopover}>
@@ -130,3 +130,5 @@ export function GastosAddTicketScreen({ houseCode }: GastosAddTicketScreenProps)
     </main>
   );
 }
+
+

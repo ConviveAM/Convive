@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -54,10 +54,10 @@ export function GastosSimplificarScreen({ houseCode }: GastosSimplificarScreenPr
                     </span>
                     <span className={styles.smallAmount}>{row.amount}</span>
                     <Image
-                      src={row.twoWay ? "/iconos/flechasdosdirecciones.svg" : "/iconos/flechapagos.svg"}
+                      src={row.twoWay ? "/iconos/flechasdosdirecciones.svg" : "/iconos/flechaderecha.svg"}
                       alt=""
-                      width={18}
-                      height={18}
+                      width={16}
+                      height={16}
                     />
                     <span className={styles.personTag}>
                       <Image src="/images/IconoperfilH.webp" alt="" width={18} height={18} />
@@ -66,7 +66,7 @@ export function GastosSimplificarScreen({ houseCode }: GastosSimplificarScreenPr
                     <span className={styles.smallAmount}>{row.amount}</span>
                     {row.to ? (
                       <>
-                        <Image src="/iconos/flechapagos.svg" alt="" width={18} height={18} />
+                        <Image src="/iconos/flechaderecha.svg" alt="" width={16} height={16} />
                         <span className={styles.personTag}>
                           <Image src="/images/IconoperfilH.webp" alt="" width={18} height={18} />
                           {row.to}
@@ -86,3 +86,7 @@ export function GastosSimplificarScreen({ houseCode }: GastosSimplificarScreenPr
     </main>
   );
 }
+
+
+
+
