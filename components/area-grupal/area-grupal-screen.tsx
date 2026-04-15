@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Plus } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -22,6 +23,21 @@ const barData = [
   { month: "Abr", value: 1250 },
 ];
 
+const MONTH_LABELS = [
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
+] as const;
+
 const pieData = [
   { name: "Alquiler", value: 35, color: "#78A978" },
   { name: "Agua", value: 12, color: "#8FB7D8" },
@@ -32,16 +48,31 @@ const pieData = [
 ];
 
 const compareItems = [
-  { name: "Luz", value: "50€", trend: "up", text: "15% mas que el mes pasado" },
-  { name: "Agua", value: "50€", trend: "up", text: "15% mas que el mes pasado" },
-  { name: "Alquiler", value: "50€", trend: "up", text: "15% mas que el mes pasado" },
-  { name: "Wifi", value: "50€", trend: "down", text: "Igual que el ano pasado" },
+  { name: "Luz", currentAmount: 50, previousAmount: 43, text: "15% mas que el mes pasado" },
+  { name: "Agua", currentAmount: 50, previousAmount: 43, text: "15% mas que el mes pasado" },
+  { name: "Alquiler", currentAmount: 50, previousAmount: 43, text: "15% mas que el mes pasado" },
+  { name: "Wifi", currentAmount: 50, previousAmount: 50, text: "Igual que el ano pasado" },
 ];
+
+function getTrend(currentAmount: number, previousAmount: number) {
+  if (currentAmount > previousAmount) return "up";
+  if (currentAmount < previousAmount) return "down";
+  return "equal";
+}
 
 export function AreaGrupalScreen({
   houseCode,
   dashboardPath,
 }: AreaGrupalScreenProps) {
+  const budgetAmount = 50;
+  const spentAmount = 30;
+  const isOverBudget = spentAmount > budgetAmount;
+  const [currentMonthLabel, setCurrentMonthLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentMonthLabel(MONTH_LABELS[new Date().getMonth()]);
+  }, []);
+
   const basePath = dashboardPath ?? `/dashboard/${houseCode}`;
   return (
     <main className={styles.page}>
@@ -90,8 +121,16 @@ export function AreaGrupalScreen({
             <Card className={styles.whiteCard}>
               <h3 className={styles.whiteTitle}>Fondos compartidos</h3>
               <div className={styles.moneyRows}>
-                <p><span>Presupuesto</span><strong>50€</strong></p>
-                <p><span>Gastado</span><strong>30€</strong></p>
+                <p>
+                  <span>Presupuesto</span>
+                  <strong className={styles.budgetAmount}>{`${budgetAmount}\u20AC`}</strong>
+                </p>
+                <p>
+                  <span>Gastado</span>
+                  <strong className={isOverBudget ? styles.spentAmountOver : styles.spentAmount}>
+                    {`${spentAmount}\u20AC`}
+                  </strong>
+                </p>
               </div>
               <Progress value={60} className={styles.progressRoot} />
             </Card>
@@ -106,8 +145,21 @@ export function AreaGrupalScreen({
                 <BarChart data={barData} margin={{ top: 10, right: 18, left: 10, bottom: 0 }}>
                   <XAxis dataKey="month" tick={{ fill: "#F0EAE4", fontSize: 12 }} axisLine={{ stroke: "#F0EAE4" }} />
                   <YAxis hide />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#F0EAE4" radius={[6, 6, 0, 0]} maxBarSize={34} />
+                  <Tooltip
+                    cursor={false}
+                    formatter={(value) => [value, "valor"]}
+                    contentStyle={{ color: "#111111" }}
+                    labelStyle={{ color: "#111111" }}
+                    itemStyle={{ color: "#111111" }}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={34}>
+                    {barData.map((entry) => (
+                      <Cell
+                        key={entry.month}
+                        fill={entry.month === currentMonthLabel ? "#BE6F8B" : "#F0EAE4"}
+                      />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -124,7 +176,12 @@ export function AreaGrupalScreen({
                         <Cell key={entry.name} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip
+                      formatter={(value, name) => [value, name]}
+                      contentStyle={{ color: "#111111" }}
+                      labelStyle={{ color: "#111111" }}
+                      itemStyle={{ color: "#111111" }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
                 <ul className={styles.legend}>
@@ -151,8 +208,15 @@ export function AreaGrupalScreen({
                       </div>
                     </div>
                     <div className={styles.compareRight}>
-                      <strong>{item.value}</strong>
-                      {item.trend === "up" ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                      <strong>{`${item.currentAmount}\u20AC`}</strong>
+                      <span className={styles.arrowSlot} aria-hidden="true">
+                        {getTrend(item.currentAmount, item.previousAmount) === "up" ? (
+                          <ArrowUp size={14} />
+                        ) : null}
+                        {getTrend(item.currentAmount, item.previousAmount) === "down" ? (
+                          <ArrowDown size={14} />
+                        ) : null}
+                      </span>
                     </div>
                   </li>
                 ))}
@@ -164,3 +228,4 @@ export function AreaGrupalScreen({
     </main>
   );
 }
+
