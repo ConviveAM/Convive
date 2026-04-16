@@ -12,7 +12,9 @@ import styles from "./area-grupal-screen.module.css";
 
 type AreaGrupalScreenProps = {
   houseCode: string;
-  dashboardPath?: string;
+  dashboardPath: string;
+  inviteCode: string | null;
+  canManageInvites: boolean;
 };
 
 const barData = [
@@ -41,8 +43,14 @@ const compareItems = [
 export function AreaGrupalScreen({
   houseCode,
   dashboardPath,
+  inviteCode,
+  canManageInvites,
 }: AreaGrupalScreenProps) {
-  const basePath = dashboardPath ?? `/dashboard/${houseCode}`;
+  const basePath = dashboardPath;
+  const inviteHref = inviteCode
+    ? `/login?flow=join&code=${encodeURIComponent(inviteCode)}`
+    : null;
+
   return (
     <main className={styles.page}>
       <section className={styles.panel}>
@@ -70,7 +78,18 @@ export function AreaGrupalScreen({
                 ))}
               </div>
             </div>
-            <p className={styles.code}>CODIGO: 172836</p>
+            <div className={styles.inviteBox}>
+              {canManageInvites && inviteCode ? (
+                <>
+                  <p className={styles.code}>CODIGO DE INVITACION: {inviteCode}</p>
+                  <Link href={inviteHref} className={styles.inviteLink}>
+                    Invitar al piso
+                  </Link>
+                </>
+              ) : (
+                <p className={styles.code}>CODIGO PUBLICO DEL PISO: {houseCode}</p>
+              )}
+            </div>
           </Card>
 
           <div className={styles.gridTwo}>
@@ -164,3 +183,4 @@ export function AreaGrupalScreen({
     </main>
   );
 }
+

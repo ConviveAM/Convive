@@ -1,42 +1,177 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { Card } from "../ui/card";
-import type { SharedExpense } from "../../lib/dashboard-types";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+
+import {
+  adminConfirmPaymentAction,
+  adminRejectPaymentAction,
+  requestExpensePaymentConfirmationAction,
+} from "../../app/actions/expense-actions";
+import type {
+  CurrentUserExpenseState,
+  PendingPaymentConfirmation,
+  SharedExpense,
+} from "../../lib/dashboard-types";
 import {
   formatCurrency,
   formatMonthLabel,
   formatShortDate,
 } from "../../lib/dashboard-presenters";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
 import styles from "./gastos-division-screen.module.css";
 
 type GastosDivisionScreenProps = {
   houseCode: string;
-  dashboardPath?: string;
+  dashboardPath: string;
   sharedExpenses?: SharedExpense[];
+  currentProfileId: string;
+  currentUserExpenseStates?: CurrentUserExpenseState[];
+  pendingPaymentConfirmations?: PendingPaymentConfirmation[];
+  isAdmin?: boolean;
 };
+
+function matchesSearch(expense: SharedExpense, searchTerm: string) {
+  const haystack = [
+    expense.title,
+    expense.paid_by_name,
+    expense.participants_text,
+    expense.expense_type,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(searchTerm);
+}
 
 export function GastosDivisionScreen({
   houseCode,
   dashboardPath,
   sharedExpenses = [],
+  currentProfileId,
+  currentUserExpenseStates = [],
+  pendingPaymentConfirmations = [],
+  isAdmin = false,
 }: GastosDivisionScreenProps) {
-  const basePath = dashboardPath ?? `/dashboard/${houseCode}`;
-  const groupedExpenses = sharedExpenses.reduce<
-    Array<{ month: string; rows: SharedExpense[] }>
-  >((groups, expense) => {
-    const month = formatMonthLabel(expense.expense_date);
-    const currentGroup = groups.find((group) => group.month === month);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [searchValue, setSearchValue] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const basePath = dashboardPath;
+  const normalizedSearchValue = searchValue.trim().toLowerCase();
 
-    if (currentGroup) {
-      currentGroup.rows.push(expense);
+  const currentUserStateByExpenseId = new Map(
+    currentUserExpenseStates.map((state) => [state.expense_id, state] as const)
+  );
+
+  const groupedExpenses = sharedExpenses
+    .filter((expense) =>
+      normalizedSearchValue ? matchesSearch(expense, normalizedSearchValue) : true
+    )
+    .reduce<Array<{ month: string; rows: SharedExpense[] }>>((groups, expense) => {
+      const month = formatMonthLabel(expense.expense_date);
+      const currentGroup = groups.find((group) => group.month === month);
+
+      if (currentGroup) {
+        currentGroup.rows.push(expense);
+        return groups;
+      }
+
+      groups.push({ month, rows: [expense] });
       return groups;
+    }, []);
+
+  const filteredPendingConfirmations = pendingPaymentConfirmations.filter((payment) => {
+    if (!normalizedSearchValue) {
+      return true;
     }
 
-    groups.push({ month, rows: [expense] });
-    return groups;
-  }, []);
+    const haystack = [
+      payment.expense_title ?? "",
+      payment.from_name,
+      payment.to_name,
+      payment.note ?? "",
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(normalizedSearchValue);
+  });
+
+  const runAction = (task: () => Promise<boolean>) => {
+    setFeedbackMessage(null);
+    startTransition(async () => {
+      const shouldRefresh = await task();
+
+      if (shouldRefresh) {
+        router.refresh();
+      }
+    });
+  };
+
+  const handleRequestPaymentConfirmation = (expense: SharedExpense) => {
+    runAction(async () => {
+      const result = await requestExpensePaymentConfirmationAction({
+        houseCode,
+        dashboardPath: basePath,
+        expenseId: expense.expense_id,
+      });
+
+      if (result.success) {
+        setFeedbackMessage("Tu pago ha quedado pendiente de confirmación.");
+        return true;
+      }
+
+      if ("error" in result) {
+        setFeedbackMessage(result.error);
+      }
+      return false;
+    });
+  };
+
+  const handleAdminConfirmPayment = (paymentId: string) => {
+    runAction(async () => {
+      const result = await adminConfirmPaymentAction({
+        houseCode,
+        dashboardPath: basePath,
+        paymentId,
+      });
+
+      if (result.success) {
+        setFeedbackMessage("Pago confirmado correctamente.");
+        return true;
+      }
+
+      if ("error" in result) {
+        setFeedbackMessage(result.error);
+      }
+      return false;
+    });
+  };
+
+  const handleAdminRejectPayment = (paymentId: string) => {
+    runAction(async () => {
+      const result = await adminRejectPaymentAction({
+        houseCode,
+        dashboardPath: basePath,
+        paymentId,
+        reason: "Pago rechazado desde el panel de validación.",
+      });
+
+      if (result.success) {
+        setFeedbackMessage("Pago rechazado correctamente.");
+        return true;
+      }
+
+      if ("error" in result) {
+        setFeedbackMessage(result.error);
+      }
+      return false;
+    });
+  };
 
   return (
     <main className={styles.page}>
@@ -69,17 +204,23 @@ export function GastosDivisionScreen({
                 >
                   ←
                 </Link>
-                <h2 className={styles.cardTitle}>Division de gastos</h2>
+                <h2 className={styles.cardTitle}>División de gastos</h2>
               </div>
               <div className={styles.searchWrap}>
                 <input
                   className={styles.searchInput}
                   placeholder="Buscar"
                   aria-label="Buscar gastos"
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
                 />
                 <Image src="/iconos/Lupa.svg" alt="" width={14} height={14} />
               </div>
             </div>
+
+            {feedbackMessage ? (
+              <p className={styles.feedbackMessage}>{feedbackMessage}</p>
+            ) : null}
 
             <div className={styles.listWrap}>
               {groupedExpenses.length ? (
@@ -87,40 +228,149 @@ export function GastosDivisionScreen({
                   <section key={group.month} className={styles.monthBlock}>
                     <h3 className={styles.monthTitle}>{group.month}</h3>
                     <div className={styles.monthRows}>
-                      {group.rows.map((expense) => (
-                        <div key={expense.expense_id} className={styles.row}>
-                          <div className={styles.left}>
-                            <Image
-                              src="/iconos/building-2-svgrepo-com 1.svg"
-                              alt=""
-                              width={20}
-                              height={20}
-                            />
-                            <div>
-                              <p className={styles.main}>{expense.title}</p>
-                              <p className={styles.sub}>
-                                {formatShortDate(expense.expense_date)}
-                              </p>
-                              <p className={styles.meta}>
-                                Participantes:{" "}
-                                {expense.participants_text || "Sin participantes"}
-                              </p>
+                      {group.rows.map((expense) => {
+                        const currentUserState = currentUserStateByExpenseId.get(
+                          expense.expense_id
+                        );
+                        const currentUserIsParticipant =
+                          currentUserState?.profile_id === currentProfileId;
+                        const isPaid =
+                          currentUserState?.participant_status === "paid";
+                        const hasPendingConfirmation = Boolean(
+                          currentUserState?.pending_payment_id
+                        );
+
+                        return (
+                          <div key={expense.expense_id} className={styles.row}>
+                            <div className={styles.left}>
+                              <Image
+                                src="/iconos/building-2-svgrepo-com 1.svg"
+                                alt=""
+                                width={20}
+                                height={20}
+                              />
+                              <div>
+                                <p className={styles.main}>{expense.title}</p>
+                                <p className={styles.sub}>
+                                  {formatShortDate(expense.expense_date)} · Pagó{" "}
+                                  {expense.paid_by_name}
+                                </p>
+                                <p className={styles.meta}>
+                                  Participantes:{" "}
+                                  {expense.participants_text || "Sin participantes"}
+                                </p>
+                                {currentUserState ? (
+                                  <p className={styles.statusLine}>
+                                    Tu parte:{" "}
+                                    {formatCurrency(
+                                      currentUserState.share_amount,
+                                      expense.currency
+                                    )}{" "}
+                                    ·{" "}
+                                    {isPaid
+                                      ? "Pagada"
+                                      : hasPendingConfirmation
+                                        ? "Pendiente de confirmación"
+                                        : "Pendiente"}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
+                            <p className={styles.amount}>
+                              {formatCurrency(
+                                expense.total_amount,
+                                expense.currency
+                              )}
+                            </p>
+                            {currentUserIsParticipant ? (
+                              <Button
+                                className={`${styles.button} ${
+                                  isPaid || hasPendingConfirmation
+                                    ? styles.buttonMuted
+                                    : ""
+                                }`}
+                                onClick={() =>
+                                  !isPaid && !hasPendingConfirmation
+                                    ? handleRequestPaymentConfirmation(expense)
+                                    : undefined
+                                }
+                                disabled={isPending || isPaid || hasPendingConfirmation}
+                              >
+                                {isPaid
+                                  ? "Parte pagada"
+                                  : hasPendingConfirmation
+                                    ? "Pendiente"
+                                    : "Marcar pagado"}
+                              </Button>
+                            ) : (
+                              <span className={styles.stateBadge}>
+                                {isAdmin ? "Vista admin" : "Sin reparto"}
+                              </span>
+                            )}
                           </div>
-                          <p className={styles.amount}>
-                            {formatCurrency(expense.total_amount, expense.currency)}
-                          </p>
-                          <button className={styles.button}>Ver reparto</button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </section>
                 ))
               ) : (
                 <p className={styles.emptyState}>
-                  Todavía no hay repartos de gastos registrados.
+                  No hay gastos compartidos visibles ahora mismo.
                 </p>
               )}
+
+              {isAdmin ? (
+                <section className={styles.pendingSection}>
+                  <h3 className={styles.monthTitle}>
+                    Confirmaciones pendientes
+                  </h3>
+                  {filteredPendingConfirmations.length ? (
+                    <div className={styles.pendingRows}>
+                      {filteredPendingConfirmations.map((payment) => (
+                        <div key={payment.payment_id} className={styles.pendingRow}>
+                          <div className={styles.pendingInfo}>
+                            <p className={styles.main}>
+                              {payment.expense_title || "Gasto sin título"}
+                            </p>
+                            <p className={styles.sub}>
+                              {payment.from_name} → {payment.to_name} ·{" "}
+                              {formatCurrency(payment.amount)}
+                            </p>
+                            <p className={styles.meta}>
+                              {formatShortDate(payment.payment_date)}
+                              {payment.note ? ` · ${payment.note}` : ""}
+                            </p>
+                          </div>
+                          <div className={styles.pendingActions}>
+                            <Button
+                              className={styles.pendingApprove}
+                              onClick={() =>
+                                handleAdminConfirmPayment(payment.payment_id)
+                              }
+                              disabled={isPending}
+                            >
+                              Confirmar
+                            </Button>
+                            <Button
+                              className={styles.pendingReject}
+                              onClick={() =>
+                                handleAdminRejectPayment(payment.payment_id)
+                              }
+                              disabled={isPending}
+                            >
+                              Rechazar
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.emptyState}>
+                      No hay pagos pendientes de revisión.
+                    </p>
+                  )}
+                </section>
+              ) : null}
             </div>
           </Card>
         </div>
@@ -128,3 +378,4 @@ export function GastosDivisionScreen({
     </main>
   );
 }
+

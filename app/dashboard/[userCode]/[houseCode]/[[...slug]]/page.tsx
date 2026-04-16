@@ -24,6 +24,9 @@ import { LimpiezaScreen } from "../../../../../components/limpieza/limpieza-scre
 import { ElectricalMenu } from "../../../../../components/menu/electrical-menu";
 import {
   getAccessibleHouseContext,
+  loadActiveHouseInviteWithClient,
+  loadAddExpenseFormOptionsWithClient,
+  loadCurrentUserExpenseStatesWithClient,
   loadHouseExpensesDashboardWithClient,
 } from "../../../../../lib/dashboard";
 import { createClient } from "../../../../../utils/supabase/server";
@@ -53,6 +56,9 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   const { userCode, houseCode, slug } = await params;
   const routeContext = await getAccessibleHouseContext(userCode, houseCode);
   const sectionPath = (slug ?? []).join("/");
+  const isHouseAdmin =
+    routeContext.memberRole === "admin" ||
+    routeContext.house.created_by === routeContext.profile.id;
 
   if (!sectionPath) {
     const memberCount = await loadMemberCount(
@@ -98,10 +104,17 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   }
 
   if (sectionPath === "area-grupal") {
+    const houseInvite = await loadActiveHouseInviteWithClient(
+      routeContext.supabase,
+      routeContext.house.public_code
+    );
+
     return (
       <AreaGrupalScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        inviteCode={houseInvite.inviteCode}
+        canManageInvites={houseInvite.canManageInvites}
       />
     );
   }
@@ -213,6 +226,22 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         50
       )
     : null;
+  const currentUserExpenseStates = expensesDashboard
+    ? await loadCurrentUserExpenseStatesWithClient(routeContext.supabase, {
+        houseId: routeContext.house.id,
+        profileId: routeContext.profile.id,
+        expenseIds: expensesDashboard.shared_expenses.map(
+          (expense) => expense.expense_id
+        ),
+      })
+    : [];
+  const addExpenseFormOptions =
+    sectionPath === "gastos/anadir-ticket"
+      ? await loadAddExpenseFormOptionsWithClient(
+          routeContext.supabase,
+          routeContext.house.public_code
+        )
+      : null;
 
   if (sectionPath === "gastos") {
     return (
@@ -222,6 +251,10 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         tickets={expensesDashboard?.tickets ?? []}
         sharedExpenses={expensesDashboard?.shared_expenses ?? []}
         settlements={expensesDashboard?.settlements ?? []}
+        pendingPaymentConfirmations={
+          expensesDashboard?.pending_payment_confirmations ?? []
+        }
+        isAdmin={isHouseAdmin}
       />
     );
   }
@@ -242,6 +275,12 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
         sharedExpenses={expensesDashboard?.shared_expenses ?? []}
+        currentProfileId={routeContext.profile.id}
+        currentUserExpenseStates={currentUserExpenseStates}
+        pendingPaymentConfirmations={
+          expensesDashboard?.pending_payment_confirmations ?? []
+        }
+        isAdmin={isHouseAdmin}
       />
     );
   }
@@ -271,6 +310,8 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
       <GastosAddTicketScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        currentProfileId={routeContext.profile.id}
+        formOptions={addExpenseFormOptions ?? { members: [], items: [] }}
       />
     );
   }

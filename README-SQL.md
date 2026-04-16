@@ -2580,3 +2580,608 @@ do nothing;
 -- from public.house_audit_log
 -- where house_id = '3f8c1d05-3b06-4969-ac22-ee3d3ee0ed5d'
 -- order by created_at desc;
+
+-- =========================================================
+-- FIX PROFILES.PUBLIC_CODE
+-- =========================================================
+
+alter table public.profiles
+add column if not exists public_code text;
+
+create unique index if not exists profiles_public_code_uidx
+on public.profiles (public_code);
+
+do $$
+declare
+  r record;
+  v_code text;
+begin
+  for r in
+    select id
+    from public.profiles
+    where public_code is null
+       or length(trim(public_code)) = 0
+  loop
+    v_code := public.generate_house_code(12);
+
+    while exists (
+      select 1
+      from public.profiles
+      where public_code = v_code
+    ) loop
+      v_code := public.generate_house_code(12);
+    end loop;
+
+    update public.profiles
+    set public_code = v_code
+    where id = r.id;
+  end loop;
+end $$;
+
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_code text;
+begin
+  v_code := public.generate_house_code(12);
+
+  while exists (
+    select 1
+    from public.profiles
+    where public_code = v_code
+  ) loop
+    v_code := public.generate_house_code(12);
+  end loop;
+
+  insert into public.profiles (id, email, full_name, public_code)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
+    v_code
+  )
+  on conflict (id) do update
+  set
+    email = excluded.email,
+    full_name = coalesce(excluded.full_name, public.profiles.full_name),
+    public_code = coalesce(public.profiles.public_code, excluded.public_code);
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_user();
+
+-- =========================================================
+-- CONVIVE - URL CON PUBLIC_CODE + INVITACIÓN SOLO CON HOUSE_INVITES.CODE
+-- =========================================================
+
+
+-- =========================================================
+-- 0) HELPERS
+-- =========================================================
+
+create or replace function public.generate_invite_code(code_length int default 6)
+returns text
+language plpgsql
+as $$
+declare
+  chars text := '0123456789';
+  result text := '';
+  i int;
+begin
+  for i in 1..code_length loop
+    result := result || substr(chars, floor(random() * length(chars) + 1)::int, 1);
+  end loop;
+
+  return result;
+end;
+$$;
+
+
+-- =========================================================
+-- 1) ASEGURAR profiles.public_code
+-- =========================================================
+
+alter table public.profiles
+add column if not exists public_code text;
+
+create unique index if not exists profiles_public_code_uidx
+on public.profiles (public_code);
+
+do $$
+declare
+  r record;
+  v_code text;
+begin
+  for r in
+    select id
+    from public.profiles
+    where public_code is null
+       or length(trim(public_code)) = 0
+  loop
+    v_code := public.generate_house_code(12);
+
+    while exists (
+      select 1
+      from public.profiles
+      where public_code = v_code
+    ) loop
+      v_code := public.generate_house_code(12);
+    end loop;
+
+    update public.profiles
+    set public_code = v_code
+    where id = r.id;
+  end loop;
+end $$;
+
+
+-- =========================================================
+-- 2) TRIGGER DE NUEVOS USUARIOS CON public_code
+-- =========================================================
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_code text;
+begin
+  v_code := public.generate_house_code(12);
+
+  while exists (
+    select 1
+    from public.profiles
+    where public_code = v_code
+  ) loop
+    v_code := public.generate_house_code(12);
+  end loop;
+
+  insert into public.profiles (id, email, full_name, public_code)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
+    v_code
+  )
+  on conflict (id) do update
+  set
+    email = excluded.email,
+    full_name = coalesce(excluded.full_name, public.profiles.full_name),
+    public_code = coalesce(public.profiles.public_code, excluded.public_code);
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_user();
+
+
+-- =========================================================
+-- 3) ASEGURAR houses.public_code
+-- =========================================================
+
+alter table public.houses
+add column if not exists public_code text;
+
+create unique index if not exists houses_public_code_uidx
+on public.houses (public_code);
+
+do $$
+declare
+  r record;
+  v_code text;
+begin
+  for r in
+    select id
+    from public.houses
+    where public_code is null
+       or length(trim(public_code)) = 0
+  loop
+    v_code := public.generate_house_code(12);
+
+    while exists (
+      select 1
+      from public.houses
+      where public_code = v_code
+    ) loop
+      v_code := public.generate_house_code(12);
+    end loop;
+
+    update public.houses
+    set public_code = v_code
+    where id = r.id;
+  end loop;
+end $$;
+
+
+-- =========================================================
+-- 4) ASEGURAR INVITACIONES ACTIVAS PARA CASAS EXISTENTES
+-- Si una casa no tiene invitación activa, se crea una.
+-- join_code se mantiene solo por compatibilidad.
+-- =========================================================
+
+create unique index if not exists house_invites_code_uidx
+on public.house_invites (code);
+
+insert into public.house_invites (
+  house_id,
+  created_by,
+  code,
+  max_uses,
+  used_count,
+  is_active
+)
+select
+  h.id,
+  h.created_by,
+  coalesce(nullif(trim(h.join_code), ''), public.generate_invite_code(6)),
+  greatest(h.max_members - 1, 1),
+  0,
+  true
+from public.houses h
+where not exists (
+  select 1
+  from public.house_invites hi
+  where hi.house_id = h.id
+    and hi.is_active = true
+);
+
+
+-- =========================================================
+-- 5) CREAR PISO
+-- public_code solo para URL
+-- house_invites.code solo para invitación
+-- Se mantiene join_code por compatibilidad, pero no se usa para unirse.
+-- =========================================================
+
+create or replace function public.create_house(
+  p_name text,
+  p_max_members int
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_public_code text;
+  v_invite_code text;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  if p_name is null or length(trim(p_name)) = 0 then
+    raise exception 'El nombre del piso es obligatorio';
+  end if;
+
+  if p_max_members is null or p_max_members < 1 then
+    raise exception 'El número de personas debe ser mayor que 0';
+  end if;
+
+  v_public_code := public.generate_house_code(12);
+
+  while exists (
+    select 1
+    from public.houses
+    where public_code = v_public_code
+  ) loop
+    v_public_code := public.generate_house_code(12);
+  end loop;
+
+  v_invite_code := public.generate_invite_code(6);
+
+  while exists (
+    select 1
+    from public.house_invites
+    where code = v_invite_code
+  ) loop
+    v_invite_code := public.generate_invite_code(6);
+  end loop;
+
+  insert into public.houses (
+    name,
+    created_by,
+    join_code,
+    public_code,
+    max_members,
+    status
+  )
+  values (
+    trim(p_name),
+    auth.uid(),
+    v_invite_code,
+    v_public_code,
+    p_max_members,
+    'active'
+  )
+  returning id into v_house_id;
+
+  insert into public.house_members (
+    house_id,
+    profile_id,
+    role
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'admin'
+  );
+
+  insert into public.house_invites (
+    house_id,
+    created_by,
+    code,
+    max_uses,
+    used_count,
+    is_active
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    v_invite_code,
+    greatest(p_max_members - 1, 1),
+    0,
+    true
+  );
+
+  return v_public_code;
+end;
+$$;
+
+grant execute on function public.create_house(text, int) to authenticated;
+
+
+-- =========================================================
+-- 6) UNIRSE A PISO
+-- SOLO por house_invites.code
+-- YA NO por public_code
+-- YA NO por join_code
+-- =========================================================
+
+drop function if exists public.join_house_by_code(text);
+
+create function public.join_house_by_code(
+  p_code text
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house public.houses%rowtype;
+  v_current_members int;
+  v_invite public.house_invites%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  select hi.*
+  into v_invite
+  from public.house_invites hi
+  where hi.code = trim(p_code)
+    and hi.is_active = true
+    and (hi.expires_at is null or hi.expires_at > now())
+    and (
+      hi.max_uses is null
+      or hi.used_count < hi.max_uses
+    )
+  limit 1;
+
+  if v_invite.id is null then
+    raise exception 'Código de invitación no válido';
+  end if;
+
+  select *
+  into v_house
+  from public.houses
+  where id = v_invite.house_id
+    and status = 'active'
+  limit 1;
+
+  if v_house.id is null then
+    raise exception 'Piso no disponible';
+  end if;
+
+  if exists (
+    select 1
+    from public.house_members
+    where house_id = v_house.id
+      and profile_id = auth.uid()
+      and is_active = true
+  ) then
+    return v_house.public_code;
+  end if;
+
+  select count(*)
+  into v_current_members
+  from public.house_members
+  where house_id = v_house.id
+    and is_active = true;
+
+  if v_current_members >= v_house.max_members then
+    raise exception 'El piso ya está completo';
+  end if;
+
+  insert into public.house_members (
+    house_id,
+    profile_id,
+    role
+  )
+  values (
+    v_house.id,
+    auth.uid(),
+    'member'
+  );
+
+  update public.house_invites
+  set used_count = used_count + 1
+  where id = v_invite.id;
+
+  return v_house.public_code;
+end;
+$$;
+
+grant execute on function public.join_house_by_code(text) to authenticated;
+
+
+-- =========================================================
+-- 7) VER CÓDIGO DE INVITACIÓN ACTIVO
+-- Solo admin/creador
+-- =========================================================
+
+create or replace function public.get_active_house_invite_code(
+  p_house_public_code text
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_code text;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not (
+    public.is_house_creator(v_house_id)
+    or public.is_house_admin(v_house_id)
+  ) then
+    raise exception 'No autorizado para ver el código de invitación';
+  end if;
+
+  select hi.code
+  into v_code
+  from public.house_invites hi
+  where hi.house_id = v_house_id
+    and hi.is_active = true
+    and (hi.expires_at is null or hi.expires_at > now())
+  order by hi.created_at desc
+  limit 1;
+
+  return v_code;
+end;
+$$;
+
+grant execute on function public.get_active_house_invite_code(text) to authenticated;
+
+
+-- =========================================================
+-- 8) REGENERAR CÓDIGO DE INVITACIÓN
+-- Solo admin/creador
+-- Desactiva el anterior y crea uno nuevo
+-- =========================================================
+
+create or replace function public.rotate_house_invite_code(
+  p_house_public_code text
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_created_by uuid;
+  v_max_members int;
+  v_new_code text;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not (
+    public.is_house_creator(v_house_id)
+    or public.is_house_admin(v_house_id)
+  ) then
+    raise exception 'No autorizado para regenerar invitación';
+  end if;
+
+  select h.created_by, h.max_members
+  into v_created_by, v_max_members
+  from public.houses h
+  where h.id = v_house_id
+  limit 1;
+
+  update public.house_invites
+  set is_active = false
+  where house_id = v_house_id
+    and is_active = true;
+
+  v_new_code := public.generate_invite_code(6);
+
+  while exists (
+    select 1
+    from public.house_invites
+    where code = v_new_code
+  ) loop
+    v_new_code := public.generate_invite_code(6);
+  end loop;
+
+  insert into public.house_invites (
+    house_id,
+    created_by,
+    code,
+    max_uses,
+    used_count,
+    is_active
+  )
+  values (
+    v_house_id,
+    v_created_by,
+    v_new_code,
+    greatest(v_max_members - 1, 1),
+    0,
+    true
+  );
+
+  return v_new_code;
+end;
+$$;
+
+grant execute on function public.rotate_house_invite_code(text) to authenticated;
+
+
+-- =========================================================
+-- 9) RLS DE house_invites
+-- Solo admin/creador puede leer invitaciones
+-- =========================================================
+
+alter table public.house_invites enable row level security;
+
+drop policy if exists "invites_select_if_member" on public.house_invites;
+drop policy if exists "house_invites_select_if_admin" on public.house_invites;
+
+create policy "house_invites_select_if_admin"
+on public.house_invites
+for select
+to authenticated
+using (
+  public.is_house_creator(house_id)
+  or public.is_house_admin(house_id)
+);

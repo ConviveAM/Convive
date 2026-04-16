@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { Card } from "../ui/card";
 import type { ExpenseTicket } from "../../lib/dashboard-types";
 import {
@@ -13,7 +14,7 @@ import styles from "./gastos-tickets-screen.module.css";
 
 type GastosTicketsScreenProps = {
   houseCode: string;
-  dashboardPath?: string;
+  dashboardPath: string;
   tickets?: ExpenseTicket[];
 };
 
@@ -22,8 +23,26 @@ export function GastosTicketsScreen({
   dashboardPath,
   tickets = [],
 }: GastosTicketsScreenProps) {
-  const basePath = dashboardPath ?? `/dashboard/${houseCode}`;
-  const groupedTickets = tickets.reduce<
+  const basePath = dashboardPath;
+  const [searchValue, setSearchValue] = useState("");
+  const normalizedSearchValue = searchValue.trim().toLowerCase();
+  const groupedTickets = tickets
+    .filter((ticket) => {
+      if (!normalizedSearchValue) {
+        return true;
+      }
+
+      const haystack = [
+        ticket.display_title,
+        ticket.merchant,
+        ticket.paid_by_name,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearchValue);
+    })
+    .reduce<
     Array<{ month: string; rows: ExpenseTicket[] }>
   >((groups, ticket) => {
     const month = formatMonthLabel(ticket.purchase_date);
@@ -77,6 +96,8 @@ export function GastosTicketsScreen({
                   className={styles.searchInput}
                   placeholder="Buscar"
                   aria-label="Buscar tickets"
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
                 />
                 <Image
                   src="/iconos/Lupa.svg"
@@ -114,7 +135,11 @@ export function GastosTicketsScreen({
                               </p>
                             </div>
                           </div>
-                          <button className={styles.ticketButton}>Ver ticket</button>
+                          <span className={styles.ticketButton}>
+                            {ticket.ticket_file_path
+                              ? "Archivo disponible"
+                              : "Ticket registrado"}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -130,3 +155,4 @@ export function GastosTicketsScreen({
     </main>
   );
 }
+
