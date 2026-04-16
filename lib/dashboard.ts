@@ -50,6 +50,57 @@ type HouseInviteRecord = {
   canManageInvites: boolean;
 };
 
+function toNumericLikeValue(value: unknown, fallback: number | string = 0) {
+  if (typeof value === "number" || typeof value === "string") {
+    return value;
+  }
+
+  return fallback;
+}
+
+function mapExpenseTicket(ticket: Record<string, unknown>): ExpenseTicket {
+  return {
+    ticket_id: toStringValue(ticket.ticket_id),
+    expense_id: toNullableStringValue(ticket.expense_id),
+    display_title: toStringValue(ticket.display_title),
+    merchant: toStringValue(ticket.merchant),
+    purchase_date: toStringValue(ticket.purchase_date),
+    paid_by_name: toStringValue(ticket.paid_by_name),
+    total_amount: toNumericLikeValue(ticket.total_amount),
+    my_share_amount:
+      ticket.my_share_amount === null || ticket.my_share_amount === undefined
+        ? null
+        : toNumericLikeValue(ticket.my_share_amount, 0),
+    currency: toStringValue(ticket.currency, "EUR"),
+    ticket_file_path: toNullableStringValue(ticket.ticket_file_path),
+    settlement_status: toNullableStringValue(ticket.settlement_status),
+  };
+}
+
+function mapSharedExpense(expense: Record<string, unknown>): SharedExpense {
+  return {
+    expense_id: toStringValue(expense.expense_id),
+    title: toStringValue(expense.title),
+    expense_type: toStringValue(expense.expense_type),
+    expense_date: toStringValue(expense.expense_date),
+    paid_by_name: toStringValue(expense.paid_by_name),
+    participants_text: toStringValue(expense.participants_text),
+    participants_count:
+      typeof expense.participants_count === "number"
+        ? expense.participants_count
+        : Number(expense.participants_count ?? 0),
+    total_amount: toNumericLikeValue(expense.total_amount),
+    my_share_amount:
+      expense.my_share_amount === null || expense.my_share_amount === undefined
+        ? null
+        : toNumericLikeValue(expense.my_share_amount, 0),
+    my_status: toNullableStringValue(expense.my_status),
+    currency: toStringValue(expense.currency, "EUR"),
+    source_ticket_id: toNullableStringValue(expense.source_ticket_id),
+    settlement_status: toNullableStringValue(expense.settlement_status),
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -352,29 +403,9 @@ export async function loadHouseExpensesDashboardWithClient(
 
   return {
     house,
-    tickets: asArray<ExpenseTicket>(data.tickets),
+    tickets: asArray<Record<string, unknown>>(data.tickets).map(mapExpenseTicket),
     shared_expenses: asArray<Record<string, unknown>>(data.shared_expenses).map(
-      (expense) =>
-        ({
-          expense_id: toStringValue(expense.expense_id),
-          title: toStringValue(expense.title),
-          expense_type: toStringValue(expense.expense_type),
-          expense_date: toStringValue(expense.expense_date),
-          paid_by_name: toStringValue(expense.paid_by_name),
-          participants_text: toStringValue(expense.participants_text),
-          participants_count:
-            typeof expense.participants_count === "number"
-              ? expense.participants_count
-              : Number(expense.participants_count ?? 0),
-          total_amount:
-            typeof expense.total_amount === "number" ||
-            typeof expense.total_amount === "string"
-              ? expense.total_amount
-              : 0,
-          currency: toStringValue(expense.currency, "EUR"),
-          source_ticket_id: toNullableStringValue(expense.source_ticket_id),
-          settlement_status: toNullableStringValue(expense.settlement_status),
-        }) satisfies SharedExpense
+      mapSharedExpense
     ),
     settlements: asArray<Settlement>(data.settlements),
     pending_payment_confirmations: asArray<Record<string, unknown>>(
@@ -399,6 +430,77 @@ export async function loadHouseExpensesDashboardWithClient(
         }) satisfies PendingPaymentConfirmation
     ),
   } satisfies ExpensesDashboardData;
+}
+
+export async function loadHousePurchaseTicketsHistoryWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string,
+  limit = 100,
+  offset = 0
+) {
+  const { data, error } = await supabase.rpc("get_house_purchase_tickets_history", {
+    p_house_public_code: houseCode,
+    p_limit: limit,
+    p_offset: offset,
+  });
+
+  if (error) {
+    notFound();
+  }
+
+  return asArray<Record<string, unknown>>(data).map(mapExpenseTicket);
+}
+
+export async function loadHouseSharedExpensesHistoryWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string,
+  limit = 100,
+  offset = 0
+) {
+  const { data, error } = await supabase.rpc("get_house_shared_expenses_history", {
+    p_house_public_code: houseCode,
+    p_limit: limit,
+    p_offset: offset,
+  });
+
+  if (error) {
+    notFound();
+  }
+
+  return asArray<Record<string, unknown>>(data).map(mapSharedExpense);
+}
+
+export async function loadHousePendingPaymentConfirmationsWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string
+) {
+  const { data, error } = await supabase.rpc(
+    "get_house_pending_payment_confirmations",
+    {
+      p_house_public_code: houseCode,
+    }
+  );
+
+  if (error) {
+    return [] satisfies PendingPaymentConfirmation[];
+  }
+
+  return asArray<Record<string, unknown>>(data).map(
+    (payment) =>
+      ({
+        payment_id: toStringValue(payment.payment_id),
+        expense_id: toNullableStringValue(payment.expense_id),
+        expense_title: toNullableStringValue(payment.expense_title),
+        from_profile_id: toStringValue(payment.from_profile_id),
+        from_name: toStringValue(payment.from_name),
+        to_profile_id: toStringValue(payment.to_profile_id),
+        to_name: toStringValue(payment.to_name),
+        amount: toNumericLikeValue(payment.amount),
+        payment_date: toStringValue(payment.payment_date),
+        note: toNullableStringValue(payment.note),
+        status: toStringValue(payment.status),
+      }) satisfies PendingPaymentConfirmation
+  );
 }
 
 export async function loadAddExpenseFormOptionsWithClient(

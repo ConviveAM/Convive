@@ -1,12 +1,15 @@
 export type ExpenseTicket = {
   ticket_id: string;
+  expense_id: string | null;
   display_title: string;
   merchant: string;
   purchase_date: string;
   paid_by_name: string;
   total_amount: number | string;
+  my_share_amount?: number | string | null;
   currency: string;
   ticket_file_path: string | null;
+  settlement_status?: string | null;
 };
 
 export type SharedExpense = {
@@ -18,6 +21,8 @@ export type SharedExpense = {
   participants_text: string;
   participants_count: number;
   total_amount: number | string;
+  my_share_amount?: number | string | null;
+  my_status?: string | null;
   currency: string;
   source_ticket_id: string | null;
   settlement_status: string | null;

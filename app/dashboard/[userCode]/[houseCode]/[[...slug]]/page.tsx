@@ -28,6 +28,9 @@ import {
   loadAddExpenseFormOptionsWithClient,
   loadCurrentUserExpenseStatesWithClient,
   loadHouseExpensesDashboardWithClient,
+  loadHousePendingPaymentConfirmationsWithClient,
+  loadHousePurchaseTicketsHistoryWithClient,
+  loadHouseSharedExpensesHistoryWithClient,
 } from "../../../../../lib/dashboard";
 import { createClient } from "../../../../../utils/supabase/server";
 
@@ -226,15 +229,38 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         50
       )
     : null;
-  const currentUserExpenseStates = expensesDashboard
-    ? await loadCurrentUserExpenseStatesWithClient(routeContext.supabase, {
-        houseId: routeContext.house.id,
-        profileId: routeContext.profile.id,
-        expenseIds: expensesDashboard.shared_expenses.map(
-          (expense) => expense.expense_id
-        ),
-      })
+  const pendingPaymentConfirmations = sectionPath === "gastos" || sectionPath === "gastos/division"
+    ? await loadHousePendingPaymentConfirmationsWithClient(
+        routeContext.supabase,
+        routeContext.house.public_code
+      )
     : [];
+  const ticketsHistory =
+    sectionPath === "gastos/tickets"
+      ? await loadHousePurchaseTicketsHistoryWithClient(
+          routeContext.supabase,
+          routeContext.house.public_code,
+          100,
+          0
+        )
+      : [];
+  const sharedExpensesHistory =
+    sectionPath === "gastos/division"
+      ? await loadHouseSharedExpensesHistoryWithClient(
+          routeContext.supabase,
+          routeContext.house.public_code,
+          100,
+          0
+        )
+      : [];
+  const currentUserExpenseStates =
+    sectionPath === "gastos/division"
+      ? await loadCurrentUserExpenseStatesWithClient(routeContext.supabase, {
+          houseId: routeContext.house.id,
+          profileId: routeContext.profile.id,
+          expenseIds: sharedExpensesHistory.map((expense) => expense.expense_id),
+        })
+      : [];
   const addExpenseFormOptions =
     sectionPath === "gastos/anadir-ticket"
       ? await loadAddExpenseFormOptionsWithClient(
@@ -251,10 +277,8 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         tickets={expensesDashboard?.tickets ?? []}
         sharedExpenses={expensesDashboard?.shared_expenses ?? []}
         settlements={expensesDashboard?.settlements ?? []}
-        pendingPaymentConfirmations={
-          expensesDashboard?.pending_payment_confirmations ?? []
-        }
-        isAdmin={isHouseAdmin}
+        pendingPaymentConfirmations={pendingPaymentConfirmations}
+        canReviewPayments={isHouseAdmin}
       />
     );
   }
@@ -264,7 +288,7 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
       <GastosTicketsScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
-        tickets={expensesDashboard?.tickets ?? []}
+        tickets={ticketsHistory}
       />
     );
   }
@@ -274,13 +298,11 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
       <GastosDivisionScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
-        sharedExpenses={expensesDashboard?.shared_expenses ?? []}
+        sharedExpenses={sharedExpensesHistory}
         currentProfileId={routeContext.profile.id}
         currentUserExpenseStates={currentUserExpenseStates}
-        pendingPaymentConfirmations={
-          expensesDashboard?.pending_payment_confirmations ?? []
-        }
-        isAdmin={isHouseAdmin}
+        pendingPaymentConfirmations={pendingPaymentConfirmations}
+        canReviewPayments={isHouseAdmin}
       />
     );
   }

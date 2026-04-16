@@ -22,7 +22,7 @@ type GastosScreenProps = {
   sharedExpenses?: SharedExpense[];
   settlements?: Settlement[];
   pendingPaymentConfirmations?: PendingPaymentConfirmation[];
-  isAdmin?: boolean;
+  canReviewPayments?: boolean;
 };
 
 export function GastosScreen({
@@ -32,7 +32,7 @@ export function GastosScreen({
   sharedExpenses = [],
   settlements = [],
   pendingPaymentConfirmations = [],
-  isAdmin = false,
+  canReviewPayments = false,
 }: GastosScreenProps) {
   const basePath = dashboardPath;
   const visibleTickets = tickets.slice(0, 2);
@@ -99,7 +99,10 @@ export function GastosScreen({
                       </div>
                     </div>
                     <p className={styles.amount}>
-                      {formatCurrency(ticket.total_amount, ticket.currency)}
+                      {formatCurrency(
+                        ticket.my_share_amount ?? ticket.total_amount,
+                        ticket.currency
+                      )}
                     </p>
                     <Link
                       href={`${basePath}/gastos/tickets`}
@@ -145,7 +148,10 @@ export function GastosScreen({
                       </div>
                     </div>
                     <p className={styles.amount}>
-                      {formatCurrency(expense.total_amount, expense.currency)}
+                      {formatCurrency(
+                        expense.my_share_amount ?? expense.total_amount,
+                        expense.currency
+                      )}
                     </p>
                     <Link
                       href={`${basePath}/gastos/division`}
@@ -230,7 +236,7 @@ export function GastosScreen({
             </div>
           </Card>
 
-          {isAdmin ? (
+          {canReviewPayments ? (
             <Card className={styles.simpleCard}>
               <div className={styles.sectionTop}>
                 <div>

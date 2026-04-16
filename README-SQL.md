@@ -3185,3 +3185,1124 @@ using (
   public.is_house_creator(house_id)
   or public.is_house_admin(house_id)
 );
+
+-- =========================================================
+-- CONVIVE - PENDIENTES PERSONALES + HISTORIAL + REVISIÓN
+-- CREADOR DEL GASTO O ADMIN
+-- =========================================================
+
+-- =========================================================
+-- 0) LIMPIEZA DE FUNCIONES A REEMPLAZAR / CREAR
+-- =========================================================
+
+drop function if exists public.can_review_expense_payment(uuid, uuid);
+drop function if exists public.get_my_pending_purchase_tickets(text, integer);
+drop function if exists public.get_my_pending_shared_expenses(text, integer);
+drop function if exists public.get_house_purchase_tickets_history(text, integer, integer);
+drop function if exists public.get_house_shared_expenses_history(text, integer, integer);
+
+drop function if exists public.create_pending_ticket_expense(
+  text,
+  text,
+  text,
+  text,
+  date,
+  numeric,
+  text[],
+  uuid[],
+  text,
+  uuid
+);
+
+drop function if exists public.request_expense_payment_confirmation(
+  text,
+  uuid,
+  text,
+  numeric
+);
+
+drop function if exists public.admin_confirm_payment(text, uuid);
+drop function if exists public.admin_reject_payment(text, uuid, text);
+drop function if exists public.get_house_pending_payment_confirmations(text);
+drop function if exists public.get_house_expenses_dashboard(text, integer, integer);
+
+
+-- =========================================================
+-- 1) HELPER: QUIÉN PUEDE REVISAR/VALIDAR UN PAGO
+-- Regla:
+-- - el creador del gasto
+-- - o un admin de la casa
+-- =========================================================
+
+create function public.can_review_expense_payment(
+  p_house_id uuid,
+  p_expense_id uuid
+)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    public.is_house_admin(p_house_id)
+    or exists (
+      select 1
+      from public.shared_expenses se
+      where se.id = p_expense_id
+        and se.house_id = p_house_id
+        and se.created_by_profile_id = auth.uid()
+    );
+$$;
+
+grant execute on function public.can_review_expense_payment(uuid, uuid) to authenticated;
+
+
+-- =========================================================
+-- 2) BACKFILL:
+-- quien pagó el gasto debe quedar marcado como paid
+-- si estaba como pending por el esquema anterior
+-- =========================================================
+
+update public.expense_participants ep
+set
+  status = 'paid',
+  updated_at = now()
+from public.shared_expenses se
+where ep.expense_id = se.id
+  and ep.profile_id = se.paid_by_profile_id
+  and ep.status <> 'paid';
+
+do $$
+declare
+  r record;
+begin
+  for r in
+    select id
+    from public.shared_expenses
+  loop
+    perform public.recalculate_expense_settlement(r.id);
+  end loop;
+end $$;
+
+
+-- =========================================================
+-- 3) CREAR GASTO:
+-- el pagador queda automáticamente como paid
+-- el resto como pending
+-- =========================================================
+
+create function public.create_pending_ticket_expense(
+  p_house_public_code text,
+  p_ticket_kind text,
+  p_title text,
+  p_merchant text,
+  p_purchase_date date,
+  p_total_amount numeric,
+  p_item_names text[],
+  p_participant_profile_ids uuid[],
+  p_notes text default null,
+  p_paid_by_profile_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_paid_by_profile_id uuid;
+  v_ticket_id uuid;
+  v_expense_id uuid;
+  v_count int;
+  v_valid_count int;
+  v_base_share numeric(10,2);
+  v_share numeric(10,2);
+  v_remaining numeric(10,2);
+  v_i int;
+  v_item_name text;
+  v_participant_id uuid;
+  v_participant_status text;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not (public.is_house_member(v_house_id) or public.is_house_creator(v_house_id)) then
+    raise exception 'Sin acceso a la casa';
+  end if;
+
+  if p_total_amount is null or p_total_amount <= 0 then
+    raise exception 'El importe total debe ser mayor que 0';
+  end if;
+
+  if p_purchase_date is null then
+    raise exception 'La fecha de compra es obligatoria';
+  end if;
+
+  if p_title is null or length(trim(p_title)) = 0 then
+    raise exception 'El título es obligatorio';
+  end if;
+
+  if p_ticket_kind is null or p_ticket_kind not in ('purchase', 'unexpected') then
+    raise exception 'Tipo de ticket no válido';
+  end if;
+
+  v_paid_by_profile_id := coalesce(p_paid_by_profile_id, auth.uid());
+
+  if not exists (
+    select 1
+    from public.house_members hm
+    where hm.house_id = v_house_id
+      and hm.profile_id = v_paid_by_profile_id
+      and hm.is_active = true
+  ) then
+    raise exception 'La persona que paga no pertenece a la casa';
+  end if;
+
+  v_count := coalesce(array_length(p_participant_profile_ids, 1), 0);
+
+  if v_count = 0 then
+    raise exception 'Debes seleccionar al menos un participante';
+  end if;
+
+  select count(distinct x.profile_id)::int
+  into v_valid_count
+  from unnest(p_participant_profile_ids) as x(profile_id)
+  join public.house_members hm
+    on hm.house_id = v_house_id
+   and hm.profile_id = x.profile_id
+   and hm.is_active = true;
+
+  if v_valid_count <> v_count then
+    raise exception 'Hay participantes que no pertenecen a la casa o están repetidos';
+  end if;
+
+  insert into public.purchase_tickets (
+    house_id,
+    paid_by_profile_id,
+    created_by_profile_id,
+    merchant,
+    title,
+    purchase_date,
+    total_amount,
+    currency,
+    notes,
+    ticket_kind,
+    status
+  )
+  values (
+    v_house_id,
+    v_paid_by_profile_id,
+    auth.uid(),
+    coalesce(nullif(trim(p_merchant), ''), 'Manual'),
+    trim(p_title),
+    p_purchase_date,
+    round(p_total_amount, 2),
+    'EUR',
+    p_notes,
+    p_ticket_kind,
+    'active'
+  )
+  returning id into v_ticket_id;
+
+  if p_item_names is not null then
+    foreach v_item_name in array p_item_names
+    loop
+      if v_item_name is not null and length(trim(v_item_name)) > 0 then
+        insert into public.purchase_ticket_items (
+          ticket_id,
+          description,
+          quantity,
+          unit_price
+        )
+        values (
+          v_ticket_id,
+          trim(v_item_name),
+          1,
+          0
+        );
+
+        insert into public.house_item_catalog (
+          house_id,
+          name,
+          created_by_profile_id,
+          is_active
+        )
+        values (
+          v_house_id,
+          trim(v_item_name),
+          auth.uid(),
+          true
+        )
+        on conflict (house_id, normalized_name)
+        do update set is_active = true;
+      end if;
+    end loop;
+  end if;
+
+  insert into public.shared_expenses (
+    house_id,
+    source_ticket_id,
+    created_by_profile_id,
+    paid_by_profile_id,
+    title,
+    description,
+    expense_type,
+    expense_date,
+    total_amount,
+    currency,
+    split_method,
+    status,
+    settlement_status
+  )
+  values (
+    v_house_id,
+    v_ticket_id,
+    auth.uid(),
+    v_paid_by_profile_id,
+    trim(p_title),
+    p_notes,
+    'ticket',
+    p_purchase_date,
+    round(p_total_amount, 2),
+    'EUR',
+    'equal',
+    'active',
+    'open'
+  )
+  returning id into v_expense_id;
+
+  v_base_share := trunc((p_total_amount / v_count)::numeric, 2);
+  v_remaining := round(p_total_amount, 2);
+
+  for v_i in 1..v_count
+  loop
+    v_participant_id := p_participant_profile_ids[v_i];
+
+    if v_i < v_count then
+      v_share := v_base_share;
+    else
+      v_share := round(v_remaining, 2);
+    end if;
+
+    v_participant_status := case
+      when v_participant_id = v_paid_by_profile_id then 'paid'
+      else 'pending'
+    end;
+
+    insert into public.expense_participants (
+      expense_id,
+      profile_id,
+      share_amount,
+      status
+    )
+    values (
+      v_expense_id,
+      v_participant_id,
+      v_share,
+      v_participant_status
+    );
+
+    v_remaining := round(v_remaining - v_share, 2);
+  end loop;
+
+  perform public.recalculate_expense_settlement(v_expense_id);
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'shared_expense',
+    v_expense_id,
+    'created',
+    jsonb_build_object(
+      'ticket_id', v_ticket_id,
+      'ticket_kind', p_ticket_kind,
+      'title', p_title,
+      'merchant', p_merchant,
+      'purchase_date', p_purchase_date,
+      'total_amount', round(p_total_amount, 2),
+      'participant_profile_ids', to_jsonb(p_participant_profile_ids),
+      'item_names', to_jsonb(p_item_names),
+      'paid_by_profile_id', v_paid_by_profile_id
+    )
+  );
+
+  return jsonb_build_object(
+    'ticket_id', v_ticket_id,
+    'expense_id', v_expense_id,
+    'house_public_code', p_house_public_code
+  );
+end;
+$$;
+
+grant execute on function public.create_pending_ticket_expense(
+  text,
+  text,
+  text,
+  text,
+  date,
+  numeric,
+  text[],
+  uuid[],
+  text,
+  uuid
+) to authenticated;
+
+
+-- =========================================================
+-- 4) MARCAR COMO PAGADO
+-- - si lo hace el propio pagador del ticket y su participante existe:
+--   se marca directamente como paid sin insertar payment
+-- - si lo hace otro participante:
+--   se crea payment pendiente de revisión
+-- =========================================================
+
+create function public.request_expense_payment_confirmation(
+  p_house_public_code text,
+  p_expense_id uuid,
+  p_note text default null,
+  p_amount numeric default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_expense public.shared_expenses%rowtype;
+  v_participant public.expense_participants%rowtype;
+  v_amount numeric(10,2);
+  v_payment_id uuid;
+  v_new_status text;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  select *
+  into v_expense
+  from public.shared_expenses se
+  where se.id = p_expense_id
+    and se.house_id = v_house_id
+    and se.status = 'active'
+  limit 1;
+
+  if v_expense.id is null then
+    raise exception 'Gasto no encontrado';
+  end if;
+
+  select *
+  into v_participant
+  from public.expense_participants ep
+  where ep.expense_id = p_expense_id
+    and ep.profile_id = auth.uid()
+  limit 1;
+
+  if v_participant.id is null then
+    raise exception 'No participas en este gasto';
+  end if;
+
+  if v_participant.status = 'paid' then
+    raise exception 'Tu parte ya está marcada como pagada';
+  end if;
+
+  if auth.uid() = v_expense.paid_by_profile_id then
+    update public.expense_participants
+    set
+      status = 'paid',
+      updated_at = now()
+    where id = v_participant.id;
+
+    v_new_status := public.recalculate_expense_settlement(p_expense_id);
+
+    insert into public.house_audit_log (
+      house_id,
+      actor_profile_id,
+      entity_type,
+      entity_id,
+      action,
+      details
+    )
+    values (
+      v_house_id,
+      auth.uid(),
+      'shared_expense',
+      p_expense_id,
+      'self_marked_paid',
+      jsonb_build_object(
+        'profile_id', auth.uid(),
+        'share_amount', v_participant.share_amount,
+        'expense_settlement_status', v_new_status
+      )
+    );
+
+    return jsonb_build_object(
+      'status', 'completed_self',
+      'expense_id', p_expense_id,
+      'expense_settlement_status', v_new_status
+    );
+  end if;
+
+  if exists (
+    select 1
+    from public.payments p
+    where p.related_expense_id = p_expense_id
+      and p.from_profile_id = auth.uid()
+      and p.status = 'pending'
+  ) then
+    raise exception 'Ya tienes una confirmación pendiente para este gasto';
+  end if;
+
+  v_amount := coalesce(p_amount, v_participant.share_amount);
+
+  if v_amount <= 0 then
+    raise exception 'El importe debe ser mayor que 0';
+  end if;
+
+  insert into public.payments (
+    house_id,
+    from_profile_id,
+    to_profile_id,
+    related_expense_id,
+    created_by_profile_id,
+    amount,
+    payment_date,
+    status,
+    note
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    v_expense.paid_by_profile_id,
+    p_expense_id,
+    auth.uid(),
+    round(v_amount, 2),
+    current_date,
+    'pending',
+    p_note
+  )
+  returning id into v_payment_id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'payment',
+    v_payment_id,
+    'requested_confirmation',
+    jsonb_build_object(
+      'expense_id', p_expense_id,
+      'amount', round(v_amount, 2),
+      'note', p_note
+    )
+  );
+
+  return jsonb_build_object(
+    'payment_id', v_payment_id,
+    'status', 'pending'
+  );
+end;
+$$;
+
+grant execute on function public.request_expense_payment_confirmation(
+  text,
+  uuid,
+  text,
+  numeric
+) to authenticated;
+
+
+-- =========================================================
+-- 5) VALIDAR PAGO
+-- El nombre se mantiene por compatibilidad, pero ahora puede:
+-- - el creador del gasto
+-- - o un admin
+-- =========================================================
+
+create function public.admin_confirm_payment(
+  p_house_public_code text,
+  p_payment_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_payment public.payments%rowtype;
+  v_share_amount numeric(10,2);
+  v_completed_sum numeric(10,2);
+  v_new_status text;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  select *
+  into v_payment
+  from public.payments p
+  where p.id = p_payment_id
+    and p.house_id = v_house_id
+  limit 1;
+
+  if v_payment.id is null then
+    raise exception 'Pago no encontrado';
+  end if;
+
+  if not public.can_review_expense_payment(v_house_id, v_payment.related_expense_id) then
+    raise exception 'Solo el creador del gasto o un admin puede validar pagos';
+  end if;
+
+  if v_payment.status <> 'pending' then
+    raise exception 'Este pago ya no está pendiente';
+  end if;
+
+  update public.payments
+  set
+    status = 'completed',
+    confirmed_by_profile_id = auth.uid(),
+    confirmed_at = now(),
+    updated_at = now()
+  where id = p_payment_id;
+
+  if v_payment.related_expense_id is not null then
+    select ep.share_amount
+    into v_share_amount
+    from public.expense_participants ep
+    where ep.expense_id = v_payment.related_expense_id
+      and ep.profile_id = v_payment.from_profile_id
+    limit 1;
+
+    select coalesce(sum(p.amount), 0)::numeric(10,2)
+    into v_completed_sum
+    from public.payments p
+    where p.related_expense_id = v_payment.related_expense_id
+      and p.from_profile_id = v_payment.from_profile_id
+      and p.status = 'completed';
+
+    if v_completed_sum >= v_share_amount then
+      update public.expense_participants
+      set
+        status = 'paid',
+        updated_at = now()
+      where expense_id = v_payment.related_expense_id
+        and profile_id = v_payment.from_profile_id;
+    end if;
+
+    v_new_status := public.recalculate_expense_settlement(v_payment.related_expense_id);
+  else
+    v_new_status := null;
+  end if;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'payment',
+    p_payment_id,
+    'confirmed',
+    jsonb_build_object(
+      'related_expense_id', v_payment.related_expense_id,
+      'from_profile_id', v_payment.from_profile_id,
+      'amount', v_payment.amount,
+      'expense_settlement_status', v_new_status
+    )
+  );
+
+  return jsonb_build_object(
+    'payment_id', p_payment_id,
+    'status', 'completed',
+    'expense_settlement_status', v_new_status
+  );
+end;
+$$;
+
+grant execute on function public.admin_confirm_payment(text, uuid) to authenticated;
+
+
+create function public.admin_reject_payment(
+  p_house_public_code text,
+  p_payment_id uuid,
+  p_reason text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_payment public.payments%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  select *
+  into v_payment
+  from public.payments p
+  where p.id = p_payment_id
+    and p.house_id = v_house_id
+  limit 1;
+
+  if v_payment.id is null then
+    raise exception 'Pago no encontrado';
+  end if;
+
+  if not public.can_review_expense_payment(v_house_id, v_payment.related_expense_id) then
+    raise exception 'Solo el creador del gasto o un admin puede rechazar pagos';
+  end if;
+
+  if v_payment.status <> 'pending' then
+    raise exception 'Este pago ya no está pendiente';
+  end if;
+
+  update public.payments
+  set
+    status = 'rejected',
+    rejected_by_profile_id = auth.uid(),
+    rejected_at = now(),
+    updated_at = now(),
+    note = coalesce(v_payment.note || ' | ', '') || coalesce(p_reason, '')
+  where id = p_payment_id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'payment',
+    p_payment_id,
+    'rejected',
+    jsonb_build_object(
+      'reason', p_reason
+    )
+  );
+
+  return jsonb_build_object(
+    'payment_id', p_payment_id,
+    'status', 'rejected'
+  );
+end;
+$$;
+
+grant execute on function public.admin_reject_payment(text, uuid, text) to authenticated;
+
+
+-- =========================================================
+-- 6) LISTADO DE CONFIRMACIONES PENDIENTES
+-- Visible para quien puede revisar ese gasto
+-- =========================================================
+
+create function public.get_house_pending_payment_confirmations(
+  p_house_public_code text
+)
+returns table (
+  payment_id uuid,
+  expense_id uuid,
+  expense_title text,
+  from_profile_id uuid,
+  from_name text,
+  to_profile_id uuid,
+  to_name text,
+  amount numeric(10,2),
+  payment_date date,
+  note text,
+  status text,
+  can_review boolean
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    p.id as payment_id,
+    p.related_expense_id as expense_id,
+    se.title as expense_title,
+    p.from_profile_id,
+    public.profile_display_name(p.from_profile_id) as from_name,
+    p.to_profile_id,
+    public.profile_display_name(p.to_profile_id) as to_name,
+    p.amount,
+    p.payment_date,
+    p.note,
+    p.status,
+    public.can_review_expense_payment(v_house_id, p.related_expense_id) as can_review
+  from public.payments p
+  left join public.shared_expenses se
+    on se.id = p.related_expense_id
+  where p.house_id = v_house_id
+    and p.status = 'pending'
+    and public.can_review_expense_payment(v_house_id, p.related_expense_id)
+  order by p.created_at desc;
+end;
+$$;
+
+grant execute on function public.get_house_pending_payment_confirmations(text) to authenticated;
+
+
+-- =========================================================
+-- 7) PANTALLA PRINCIPAL:
+-- SOLO lo que me queda por pagar a mí
+-- =========================================================
+
+create function public.get_my_pending_purchase_tickets(
+  p_house_public_code text,
+  p_limit int default 5
+)
+returns table (
+  ticket_id uuid,
+  expense_id uuid,
+  display_title text,
+  merchant text,
+  purchase_date date,
+  paid_by_name text,
+  total_amount numeric(10,2),
+  my_share_amount numeric(10,2),
+  currency text,
+  ticket_file_path text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    pt.id as ticket_id,
+    se.id as expense_id,
+    public.profile_display_name(pt.paid_by_profile_id)
+      || ' - ' ||
+      coalesce(nullif(trim(pt.title), ''), 'Compra ' || pt.merchant) as display_title,
+    pt.merchant,
+    pt.purchase_date,
+    public.profile_display_name(pt.paid_by_profile_id) as paid_by_name,
+    pt.total_amount,
+    ep.share_amount as my_share_amount,
+    pt.currency,
+    pt.ticket_file_path
+  from public.purchase_tickets pt
+  join public.shared_expenses se
+    on se.source_ticket_id = pt.id
+   and se.house_id = pt.house_id
+   and se.status = 'active'
+  join public.expense_participants ep
+    on ep.expense_id = se.id
+   and ep.profile_id = auth.uid()
+   and ep.is_waived = false
+   and ep.status = 'pending'
+  where pt.house_id = v_house_id
+    and pt.status = 'active'
+  order by pt.purchase_date desc, pt.created_at desc
+  limit greatest(p_limit, 1);
+end;
+$$;
+
+grant execute on function public.get_my_pending_purchase_tickets(text, int) to authenticated;
+
+
+create function public.get_my_pending_shared_expenses(
+  p_house_public_code text,
+  p_limit int default 10
+)
+returns table (
+  expense_id uuid,
+  title text,
+  expense_type text,
+  expense_date date,
+  paid_by_name text,
+  participants_text text,
+  participants_count int,
+  total_amount numeric(10,2),
+  my_share_amount numeric(10,2),
+  my_status text,
+  currency text,
+  source_ticket_id uuid,
+  settlement_status text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    se.id as expense_id,
+    se.title,
+    se.expense_type,
+    se.expense_date,
+    public.profile_display_name(se.paid_by_profile_id) as paid_by_name,
+    coalesce(participants.participants_text, '') as participants_text,
+    coalesce(participants.participants_count, 0) as participants_count,
+    se.total_amount,
+    ep.share_amount as my_share_amount,
+    ep.status as my_status,
+    se.currency,
+    se.source_ticket_id,
+    se.settlement_status
+  from public.shared_expenses se
+  join public.expense_participants ep
+    on ep.expense_id = se.id
+   and ep.profile_id = auth.uid()
+   and ep.is_waived = false
+   and ep.status = 'pending'
+  left join lateral (
+    select
+      string_agg(
+        public.profile_display_name(ep2.profile_id),
+        ', '
+        order by public.profile_display_name(ep2.profile_id)
+      ) as participants_text,
+      count(*)::int as participants_count
+    from public.expense_participants ep2
+    where ep2.expense_id = se.id
+      and ep2.is_waived = false
+  ) participants on true
+  where se.house_id = v_house_id
+    and se.status = 'active'
+    and coalesce(se.settlement_status, 'open') <> 'settled'
+  order by se.expense_date desc, se.created_at desc
+  limit greatest(p_limit, 1);
+end;
+$$;
+
+grant execute on function public.get_my_pending_shared_expenses(text, int) to authenticated;
+
+
+-- =========================================================
+-- 8) HISTORIAL PARA “VER TODO”
+-- =========================================================
+
+create function public.get_house_purchase_tickets_history(
+  p_house_public_code text,
+  p_limit int default 50,
+  p_offset int default 0
+)
+returns table (
+  ticket_id uuid,
+  expense_id uuid,
+  display_title text,
+  merchant text,
+  purchase_date date,
+  paid_by_name text,
+  total_amount numeric(10,2),
+  currency text,
+  ticket_file_path text,
+  settlement_status text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    pt.id as ticket_id,
+    se.id as expense_id,
+    public.profile_display_name(pt.paid_by_profile_id)
+      || ' - ' ||
+      coalesce(nullif(trim(pt.title), ''), 'Compra ' || pt.merchant) as display_title,
+    pt.merchant,
+    pt.purchase_date,
+    public.profile_display_name(pt.paid_by_profile_id) as paid_by_name,
+    pt.total_amount,
+    pt.currency,
+    pt.ticket_file_path,
+    coalesce(se.settlement_status, 'open') as settlement_status
+  from public.purchase_tickets pt
+  left join public.shared_expenses se
+    on se.source_ticket_id = pt.id
+   and se.house_id = pt.house_id
+  where pt.house_id = v_house_id
+    and pt.status = 'active'
+  order by pt.purchase_date desc, pt.created_at desc
+  limit greatest(p_limit, 1)
+  offset greatest(p_offset, 0);
+end;
+$$;
+
+grant execute on function public.get_house_purchase_tickets_history(text, int, int) to authenticated;
+
+
+create function public.get_house_shared_expenses_history(
+  p_house_public_code text,
+  p_limit int default 50,
+  p_offset int default 0
+)
+returns table (
+  expense_id uuid,
+  title text,
+  expense_type text,
+  expense_date date,
+  paid_by_name text,
+  participants_text text,
+  participants_count int,
+  total_amount numeric(10,2),
+  currency text,
+  source_ticket_id uuid,
+  settlement_status text,
+  my_share_amount numeric(10,2),
+  my_status text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    se.id as expense_id,
+    se.title,
+    se.expense_type,
+    se.expense_date,
+    public.profile_display_name(se.paid_by_profile_id) as paid_by_name,
+    coalesce(participants.participants_text, '') as participants_text,
+    coalesce(participants.participants_count, 0) as participants_count,
+    se.total_amount,
+    se.currency,
+    se.source_ticket_id,
+    coalesce(se.settlement_status, 'open') as settlement_status,
+    ep.share_amount as my_share_amount,
+    ep.status as my_status
+  from public.shared_expenses se
+  left join public.expense_participants ep
+    on ep.expense_id = se.id
+   and ep.profile_id = auth.uid()
+  left join lateral (
+    select
+      string_agg(
+        public.profile_display_name(ep2.profile_id),
+        ', '
+        order by public.profile_display_name(ep2.profile_id)
+      ) as participants_text,
+      count(*)::int as participants_count
+    from public.expense_participants ep2
+    where ep2.expense_id = se.id
+      and ep2.is_waived = false
+  ) participants on true
+  where se.house_id = v_house_id
+    and se.status = 'active'
+  order by se.expense_date desc, se.created_at desc
+  limit greatest(p_limit, 1)
+  offset greatest(p_offset, 0);
+end;
+$$;
+
+grant execute on function public.get_house_shared_expenses_history(text, int, int) to authenticated;
+
+
+-- =========================================================
+-- 9) DASHBOARD PRINCIPAL
+-- SOLO pendientes personales + validaciones revisables
+-- =========================================================
+
+create function public.get_house_expenses_dashboard(
+  p_house_public_code text,
+  p_ticket_limit int default 10,
+  p_expense_limit int default 10
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_result jsonb;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  select jsonb_build_object(
+    'house', (
+      select jsonb_build_object(
+        'id', h.id,
+        'name', h.name,
+        'public_code', h.public_code
+      )
+      from public.houses h
+      where h.id = v_house_id
+    ),
+    'tickets', coalesce((
+      select jsonb_agg(to_jsonb(t))
+      from public.get_my_pending_purchase_tickets(p_house_public_code, p_ticket_limit) t
+    ), '[]'::jsonb),
+    'shared_expenses', coalesce((
+      select jsonb_agg(to_jsonb(e))
+      from public.get_my_pending_shared_expenses(p_house_public_code, p_expense_limit) e
+    ), '[]'::jsonb),
+    'settlements', coalesce((
+      select jsonb_agg(to_jsonb(s))
+      from public.get_house_payment_simplification(p_house_public_code) s
+    ), '[]'::jsonb),
+    'pending_payment_confirmations', coalesce((
+      select jsonb_agg(to_jsonb(pp))
+      from public.get_house_pending_payment_confirmations(p_house_public_code) pp
+    ), '[]'::jsonb)
+  )
+  into v_result;
+
+  return v_result;
+end;
+$$;
+
+grant execute on function public.get_house_expenses_dashboard(text, int, int) to authenticated;

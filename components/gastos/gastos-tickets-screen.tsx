@@ -136,9 +136,11 @@ export function GastosTicketsScreen({
                             </div>
                           </div>
                           <span className={styles.ticketButton}>
-                            {ticket.ticket_file_path
-                              ? "Archivo disponible"
-                              : "Ticket registrado"}
+                            {ticket.settlement_status === "settled"
+                              ? "Liquidado"
+                              : ticket.ticket_file_path
+                                ? "Archivo disponible"
+                                : "Ticket registrado"}
                           </span>
                         </div>
                       ))}

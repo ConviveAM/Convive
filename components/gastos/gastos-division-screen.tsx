@@ -31,7 +31,7 @@ type GastosDivisionScreenProps = {
   currentProfileId: string;
   currentUserExpenseStates?: CurrentUserExpenseState[];
   pendingPaymentConfirmations?: PendingPaymentConfirmation[];
-  isAdmin?: boolean;
+  canReviewPayments?: boolean;
 };
 
 function matchesSearch(expense: SharedExpense, searchTerm: string) {
@@ -54,7 +54,7 @@ export function GastosDivisionScreen({
   currentProfileId,
   currentUserExpenseStates = [],
   pendingPaymentConfirmations = [],
-  isAdmin = false,
+  canReviewPayments = false,
 }: GastosDivisionScreenProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -62,7 +62,6 @@ export function GastosDivisionScreen({
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const basePath = dashboardPath;
   const normalizedSearchValue = searchValue.trim().toLowerCase();
-
   const currentUserStateByExpenseId = new Map(
     currentUserExpenseStates.map((state) => [state.expense_id, state] as const)
   );
@@ -121,7 +120,11 @@ export function GastosDivisionScreen({
       });
 
       if (result.success) {
-        setFeedbackMessage("Tu pago ha quedado pendiente de confirmación.");
+        setFeedbackMessage(
+          result.data.status === "completed_self"
+            ? "Tu parte ha quedado marcada como pagada."
+            : "Tu pago ha quedado pendiente de revision."
+        );
         return true;
       }
 
@@ -158,7 +161,7 @@ export function GastosDivisionScreen({
         houseCode,
         dashboardPath: basePath,
         paymentId,
-        reason: "Pago rechazado desde el panel de validación.",
+        reason: "Pago rechazado desde el panel de validacion.",
       });
 
       if (result.success) {
@@ -204,7 +207,7 @@ export function GastosDivisionScreen({
                 >
                   ←
                 </Link>
-                <h2 className={styles.cardTitle}>División de gastos</h2>
+                <h2 className={styles.cardTitle}>Division de gastos</h2>
               </div>
               <div className={styles.searchWrap}>
                 <input
@@ -233,9 +236,13 @@ export function GastosDivisionScreen({
                           expense.expense_id
                         );
                         const currentUserIsParticipant =
-                          currentUserState?.profile_id === currentProfileId;
+                          expense.my_share_amount !== null &&
+                          expense.my_share_amount !== undefined;
+                        const currentUserMatchesStatus =
+                          currentUserIsParticipant || expense.my_status === null;
                         const isPaid =
-                          currentUserState?.participant_status === "paid";
+                          currentUserState?.participant_status === "paid" ||
+                          expense.my_status === "paid";
                         const hasPendingConfirmation = Boolean(
                           currentUserState?.pending_payment_id
                         );
@@ -252,33 +259,35 @@ export function GastosDivisionScreen({
                               <div>
                                 <p className={styles.main}>{expense.title}</p>
                                 <p className={styles.sub}>
-                                  {formatShortDate(expense.expense_date)} · Pagó{" "}
+                                  {formatShortDate(expense.expense_date)} · Pago{" "}
                                   {expense.paid_by_name}
                                 </p>
                                 <p className={styles.meta}>
                                   Participantes:{" "}
                                   {expense.participants_text || "Sin participantes"}
                                 </p>
-                                {currentUserState ? (
+                                {currentUserMatchesStatus && currentUserIsParticipant ? (
                                   <p className={styles.statusLine}>
                                     Tu parte:{" "}
                                     {formatCurrency(
-                                      currentUserState.share_amount,
+                                      expense.my_share_amount ?? 0,
                                       expense.currency
                                     )}{" "}
                                     ·{" "}
                                     {isPaid
                                       ? "Pagada"
                                       : hasPendingConfirmation
-                                        ? "Pendiente de confirmación"
-                                        : "Pendiente"}
+                                        ? "Pendiente de revision"
+                                        : expense.my_status === "pending"
+                                          ? "Pendiente"
+                                          : "Sin estado"}
                                   </p>
                                 ) : null}
                               </div>
                             </div>
                             <p className={styles.amount}>
                               {formatCurrency(
-                                expense.total_amount,
+                                expense.my_share_amount ?? expense.total_amount,
                                 expense.currency
                               )}
                             </p>
@@ -304,7 +313,7 @@ export function GastosDivisionScreen({
                               </Button>
                             ) : (
                               <span className={styles.stateBadge}>
-                                {isAdmin ? "Vista admin" : "Sin reparto"}
+                                {canReviewPayments ? "Vista revisor" : "Sin reparto"}
                               </span>
                             )}
                           </div>
@@ -319,18 +328,16 @@ export function GastosDivisionScreen({
                 </p>
               )}
 
-              {isAdmin ? (
+              {canReviewPayments ? (
                 <section className={styles.pendingSection}>
-                  <h3 className={styles.monthTitle}>
-                    Confirmaciones pendientes
-                  </h3>
+                  <h3 className={styles.monthTitle}>Confirmaciones pendientes</h3>
                   {filteredPendingConfirmations.length ? (
                     <div className={styles.pendingRows}>
                       {filteredPendingConfirmations.map((payment) => (
                         <div key={payment.payment_id} className={styles.pendingRow}>
                           <div className={styles.pendingInfo}>
                             <p className={styles.main}>
-                              {payment.expense_title || "Gasto sin título"}
+                              {payment.expense_title || "Gasto sin titulo"}
                             </p>
                             <p className={styles.sub}>
                               {payment.from_name} → {payment.to_name} ·{" "}
@@ -366,7 +373,7 @@ export function GastosDivisionScreen({
                     </div>
                   ) : (
                     <p className={styles.emptyState}>
-                      No hay pagos pendientes de revisión.
+                      No hay pagos pendientes de revision.
                     </p>
                   )}
                 </section>
@@ -378,4 +385,3 @@ export function GastosDivisionScreen({
     </main>
   );
 }
-
