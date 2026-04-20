@@ -31,6 +31,8 @@ import {
   loadAddExpenseFormOptionsWithClient,
   loadHouseInvoiceHistoryWithClient,
   loadHouseInvoicesDashboardWithClient,
+  loadAddCleaningTaskFormOptionsWithClient,
+  loadHouseCleaningDashboardWithClient,
   loadCurrentUserExpenseStatesWithClient,
   loadHouseExpensesDashboardWithClient,
   loadHousePendingPaymentConfirmationsWithClient,
@@ -164,10 +166,24 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   }
 
   if (sectionPath === "limpieza") {
+    const [cleaningDashboard, cleaningFormOptions] = await Promise.all([
+      loadHouseCleaningDashboardWithClient(
+        routeContext.supabase,
+        routeContext.house.public_code,
+        50
+      ),
+      loadAddCleaningTaskFormOptionsWithClient(
+        routeContext.supabase,
+        routeContext.house.public_code
+      ),
+    ]);
+
     return withMiniDoor(
       <LimpiezaScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        zones={cleaningDashboard.zones}
+        formOptions={cleaningFormOptions}
       />,
       routeContext.dashboardPath,
       "limpieza"

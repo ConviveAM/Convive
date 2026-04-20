@@ -7,6 +7,12 @@ import type {
   AddInvoiceCategory,
   AddInvoiceFormOptions,
   AddInvoiceMember,
+  AddCleaningMember,
+  AddCleaningTaskFormOptions,
+  AddCleaningZone,
+  CleaningDashboardData,
+  CleaningTask,
+  CleaningZoneSection,
   CurrentUserExpenseState,
   ExpenseTicket,
   ExpensesDashboardData,
@@ -210,6 +216,125 @@ function mapInvoiceMember(member: Record<string, unknown>): AddInvoiceMember {
       toStringValue(member.name),
     role: toStringValue(member.role, "member"),
   };
+}
+
+function readCleaningZoneName(value: Record<string, unknown>) {
+  return (
+    toStringValue(value.zone_name) ||
+    toStringValue(value.cleaning_zone_name) ||
+    toStringValue(value.name) ||
+    toStringValue(value.title) ||
+    "Sin zona"
+  );
+}
+
+function mapCleaningZone(zone: Record<string, unknown>): AddCleaningZone {
+  return {
+    zone_id:
+      toStringValue(zone.zone_id) ||
+      toStringValue(zone.cleaning_zone_id) ||
+      toStringValue(zone.id),
+    name: readCleaningZoneName(zone),
+  };
+}
+
+function mapCleaningMember(member: Record<string, unknown>): AddCleaningMember {
+  return {
+    profile_id:
+      toStringValue(member.profile_id) ||
+      toStringValue(member.id) ||
+      toStringValue(member.profileId),
+    display_name:
+      toStringValue(member.display_name) ||
+      toStringValue(member.full_name) ||
+      toStringValue(member.name),
+    role: toStringValue(member.role, "member"),
+  };
+}
+
+function mapCleaningTask(
+  task: Record<string, unknown>,
+  zoneOverride: { zone_id?: string | null; zone_name?: string | null } = {}
+): CleaningTask {
+  const zoneName = zoneOverride.zone_name?.trim() || readCleaningZoneName(task);
+
+  return {
+    task_id:
+      toStringValue(task.task_id) ||
+      toStringValue(task.cleaning_task_id) ||
+      toStringValue(task.id),
+    title:
+      toStringValue(task.title) ||
+      toStringValue(task.task_title) ||
+      toStringValue(task.name) ||
+      "Tarea",
+    due_date:
+      toStringValue(task.due_date) ||
+      toStringValue(task.task_due_date) ||
+      toStringValue(task.date),
+    assigned_to_profile_id:
+      toNullableStringValue(task.assigned_to_profile_id) ??
+      toNullableStringValue(task.assigned_profile_id) ??
+      toNullableStringValue(task.profile_id),
+    assigned_to_name:
+      toStringValue(task.assigned_to_name) ||
+      toStringValue(task.assigned_name) ||
+      toStringValue(task.display_name) ||
+      toStringValue(task.full_name),
+    zone_id:
+      zoneOverride.zone_id ??
+      toNullableStringValue(task.zone_id) ??
+      toNullableStringValue(task.cleaning_zone_id),
+    zone_name: zoneName,
+    notes:
+      toNullableStringValue(task.notes) ??
+      toNullableStringValue(task.note) ??
+      toNullableStringValue(task.description),
+  };
+}
+
+function mapCleaningSection(section: Record<string, unknown>): CleaningZoneSection {
+  const zoneId =
+    toNullableStringValue(section.zone_id) ??
+    toNullableStringValue(section.cleaning_zone_id) ??
+    toNullableStringValue(section.id);
+  const zoneName = readCleaningZoneName(section);
+  const tasks = asArray<Record<string, unknown>>(
+    section.tasks ?? section.cleaning_tasks ?? section.items ?? section.rows
+  ).map((task) =>
+    mapCleaningTask(task, {
+      zone_id: zoneId,
+      zone_name: zoneName,
+    })
+  );
+
+  return {
+    zone_id: zoneId,
+    zone_name: zoneName,
+    tasks,
+  };
+}
+
+function groupCleaningTasksByZone(tasks: CleaningTask[]) {
+  const sectionsByZone = new Map<string, CleaningZoneSection>();
+
+  for (const task of tasks) {
+    const key = task.zone_id ?? task.zone_name;
+    const currentSection = sectionsByZone.get(key);
+
+    if (currentSection) {
+      currentSection.tasks.push(task);
+      continue;
+    }
+
+    sectionsByZone.set(key, {
+      zone_id: task.zone_id,
+      zone_name: task.zone_name,
+      tasks: [task],
+    });
+  }
+
+  return [...sectionsByZone.values()];
 }
 
 function orderInvoiceSections(sections: InvoiceCategorySection[]) {
@@ -949,6 +1074,186 @@ export async function loadHouseInvoiceHistoryWithClient(
     : [];
 
   return invoices.map((invoice) => mapInvoice(invoice));
+}
+
+export async function loadHouseCleaningDashboardWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string,
+  limit = 50
+) {
+  const attempts = [
+    { p_house_public_code: houseCode, p_limit_per_zone: limit },
+    { house_public_code: houseCode, limit },
+  ];
+  let data: unknown = null;
+  let lastError: unknown = null;
+
+  for (const args of attempts) {
+    const result = await supabase.rpc("get_house_cleaning_dashboard", args);
+
+    if (!result.error) {
+      data = result.data;
+      lastError = null;
+      break;
+    }
+
+    lastError = result.error;
+  }
+
+  if (lastError) {
+    console.error("get_house_cleaning_dashboard failed", lastError);
+    return { zones: [] } satisfies CleaningDashboardData;
+  }
+
+  if (isRecord(data)) {
+    const rawSections = asArray<Record<string, unknown>>(
+      data.zones ?? data.sections ?? data.cleaning_zones ?? data.rooms
+    );
+
+    if (rawSections.length) {
+      return {
+        zones: rawSections.map(mapCleaningSection),
+      } satisfies CleaningDashboardData;
+    }
+
+    const tasks = asArray<Record<string, unknown>>(
+      data.tasks ?? data.cleaning_tasks ?? data.items ?? data.rows
+    ).map((task) => mapCleaningTask(task));
+
+    return {
+      zones: groupCleaningTasksByZone(tasks),
+    } satisfies CleaningDashboardData;
+  }
+
+  if (Array.isArray(data)) {
+    const rows = asArray<Record<string, unknown>>(data);
+    const sectionRows = rows.filter(
+      (row) =>
+        Array.isArray(row.tasks) ||
+        Array.isArray(row.cleaning_tasks) ||
+        Array.isArray(row.items) ||
+        Array.isArray(row.rows)
+    );
+
+    if (sectionRows.length === rows.length && sectionRows.length > 0) {
+      return {
+        zones: sectionRows.map(mapCleaningSection),
+      } satisfies CleaningDashboardData;
+    }
+
+    return {
+      zones: groupCleaningTasksByZone(rows.map((task) => mapCleaningTask(task))),
+    } satisfies CleaningDashboardData;
+  }
+
+  return { zones: [] } satisfies CleaningDashboardData;
+}
+
+export async function loadAddCleaningTaskFormOptionsWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string
+) {
+  const attempts = [
+    { p_house_public_code: houseCode },
+    { house_public_code: houseCode },
+  ];
+  let data: unknown = null;
+  let lastError: unknown = null;
+
+  for (const args of attempts) {
+    const result = await supabase.rpc("get_add_cleaning_task_form_options", args);
+
+    if (!result.error) {
+      data = result.data;
+      lastError = null;
+      break;
+    }
+
+    lastError = result.error;
+  }
+
+  if (lastError) {
+    console.error("get_add_cleaning_task_form_options failed", lastError);
+  }
+
+  if (lastError || !isRecord(data)) {
+    return {
+      zones: [],
+      members: [],
+    } satisfies AddCleaningTaskFormOptions;
+  }
+
+  return {
+    zones: asArray<Record<string, unknown>>(
+      data.zones ?? data.cleaning_zones ?? data.rooms
+    ).map(mapCleaningZone),
+    members: asArray<Record<string, unknown>>(
+      data.members ?? data.house_members
+    ).map(mapCleaningMember),
+  } satisfies AddCleaningTaskFormOptions;
+}
+
+export async function loadHouseCleaningTaskHistoryWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string,
+  limit = 100,
+  offset = 0,
+  zoneId: string | null = null,
+  zoneName: string | null = null
+) {
+  const attempts = [
+    {
+      p_house_public_code: houseCode,
+      p_zone_id: zoneId,
+      p_limit: limit,
+      p_offset: offset,
+    },
+    {
+      p_house_public_code: houseCode,
+      p_cleaning_zone_id: zoneId,
+      p_limit: limit,
+      p_offset: offset,
+    },
+    { p_house_public_code: houseCode, p_limit: limit, p_offset: offset },
+    { house_public_code: houseCode, limit, offset },
+  ];
+  let data: unknown = null;
+  let lastError: unknown = null;
+
+  for (const args of attempts) {
+    const result = await supabase.rpc("get_house_cleaning_task_history", args);
+
+    if (!result.error) {
+      data = result.data;
+      lastError = null;
+      break;
+    }
+
+    lastError = result.error;
+  }
+
+  if (lastError) {
+    console.error("get_house_cleaning_task_history failed", lastError);
+    return [];
+  }
+
+  const tasks = isRecord(data)
+    ? asArray<Record<string, unknown>>(
+        data.tasks ?? data.cleaning_tasks ?? data.history ?? data.items ?? data.rows
+      ).map((task) => mapCleaningTask(task))
+    : asArray<Record<string, unknown>>(data).map((task) => mapCleaningTask(task));
+
+  if (zoneId) {
+    return tasks.filter((task) => task.zone_id === zoneId);
+  }
+
+  if (zoneName) {
+    return tasks.filter(
+      (task) => task.zone_name.toLowerCase() === zoneName.toLowerCase()
+    );
+  }
+
+  return tasks;
 }
 
 export async function loadAddInvoiceFormOptionsWithClient(

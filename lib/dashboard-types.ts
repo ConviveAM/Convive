@@ -129,3 +129,40 @@ export type ExpensesDashboardData = {
   settlements: Settlement[];
   pending_payment_confirmations: PendingPaymentConfirmation[];
 };
+
+export type CleaningTask = {
+  task_id: string;
+  title: string;
+  due_date: string;
+  assigned_to_profile_id: string | null;
+  assigned_to_name: string;
+  zone_id: string | null;
+  zone_name: string;
+  notes: string | null;
+};
+
+export type CleaningZoneSection = {
+  zone_id: string | null;
+  zone_name: string;
+  tasks: CleaningTask[];
+};
+
+export type CleaningDashboardData = {
+  zones: CleaningZoneSection[];
+};
+
+export type AddCleaningZone = {
+  zone_id: string;
+  name: string;
+};
+
+export type AddCleaningMember = {
+  profile_id: string;
+  display_name: string;
+  role: string;
+};
+
+export type AddCleaningTaskFormOptions = {
+  zones: AddCleaningZone[];
+  members: AddCleaningMember[];
+};
