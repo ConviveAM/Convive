@@ -118,6 +118,16 @@
   font-weight: 500;
 }
 
+.codeLabel {
+  display: inline;
+}
+
+.codeValue {
+  display: inline;
+  margin-left: 0.25rem;
+  font-weight: 700;
+}
+
 .inviteLink {
   color: #f0eae4;
   font-family: "Poppins", sans-serif;
@@ -379,5 +389,24 @@
 
   .gridTwo {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .title {
+    font-size: 22px;
+  }
+
+  .code {
+    display: grid;
+    gap: 0.08rem;
+    text-align: right;
+  }
+
+  .codeLabel,
+  .codeValue {
+    display: block;
+    margin-left: 0;
+    white-space: nowrap;
   }
 }

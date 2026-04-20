@@ -111,13 +111,19 @@ export function AreaGrupalScreen({
             <div className={styles.inviteBox}>
               {canManageInvites && inviteCode ? (
                 <>
-                  <p className={styles.code}>CODIGO DE INVITACION: {inviteCode}</p>
+                  <p className={styles.code}>
+                    <span className={styles.codeLabel}>CODIGO DE INVITACION</span>
+                    <span className={styles.codeValue}>{inviteCode}</span>
+                  </p>
                   <Link href={inviteHref ?? "#"} className={styles.inviteLink}>
                     Invitar al piso
                   </Link>
                 </>
               ) : (
-                <p className={styles.code}>CODIGO PUBLICO DEL PISO: {houseCode}</p>
+                <p className={styles.code}>
+                  <span className={styles.codeLabel}>CODIGO PUBLICO DEL PISO</span>
+                  <span className={styles.codeValue}>{houseCode}</span>
+                </p>
               )}
             </div>
           </Card>
