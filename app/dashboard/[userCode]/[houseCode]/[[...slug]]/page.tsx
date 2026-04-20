@@ -12,6 +12,7 @@ import { FacturasLuzScreen } from "../../../../../components/facturas/facturas-l
 import { FacturasScreen } from "../../../../../components/facturas/facturas-screen";
 import { FacturasSuscripcionesScreen } from "../../../../../components/facturas/facturas-suscripciones-screen";
 import { FacturasWifiScreen } from "../../../../../components/facturas/facturas-wifi-screen";
+import { FacturasHistoryScreen } from "../../../../../components/facturas/facturas-history-screen";
 import { GastosAddTicketScreen } from "../../../../../components/gastos/gastos-add-ticket-screen";
 import { GastosDivisionScreen } from "../../../../../components/gastos/gastos-division-screen";
 import { GastosPagoSimplificadoScreen } from "../../../../../components/gastos/gastos-pago-simplificado-screen";
@@ -28,6 +29,8 @@ import {
   getAccessibleHouseContext,
   loadActiveHouseInviteWithClient,
   loadAddExpenseFormOptionsWithClient,
+  loadHouseInvoiceHistoryWithClient,
+  loadHouseInvoicesDashboardWithClient,
   loadCurrentUserExpenseStatesWithClient,
   loadHouseExpensesDashboardWithClient,
   loadHousePendingPaymentConfirmationsWithClient,
@@ -205,10 +208,18 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   }
 
   if (sectionPath === "facturas") {
+    const invoicesDashboard = await loadHouseInvoicesDashboardWithClient(
+      routeContext.supabase,
+      routeContext.house.public_code,
+      5
+    );
+
     return withMiniDoor(
       <FacturasScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        sections={invoicesDashboard.sections}
+        canMarkInvoicesPaid={isHouseAdmin}
       />,
       routeContext.dashboardPath,
       "facturas"
@@ -216,10 +227,19 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   }
 
   if (sectionPath === "facturas/alquiler") {
+    const invoicesHistory = await loadHouseInvoiceHistoryWithClient(
+      routeContext.supabase,
+      routeContext.house.public_code,
+      100,
+      0
+    );
+
     return withMiniDoor(
       <FacturasAlquilerScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        invoices={invoicesHistory}
+        canMarkInvoicesPaid={isHouseAdmin}
       />,
       routeContext.dashboardPath,
       "facturas"
@@ -227,10 +247,19 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   }
 
   if (sectionPath === "facturas/suscripciones") {
+    const invoicesHistory = await loadHouseInvoiceHistoryWithClient(
+      routeContext.supabase,
+      routeContext.house.public_code,
+      100,
+      0
+    );
+
     return withMiniDoor(
       <FacturasSuscripcionesScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        invoices={invoicesHistory}
+        canMarkInvoicesPaid={isHouseAdmin}
       />,
       routeContext.dashboardPath,
       "facturas"
@@ -238,10 +267,19 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   }
 
   if (sectionPath === "facturas/wifi") {
+    const invoicesHistory = await loadHouseInvoiceHistoryWithClient(
+      routeContext.supabase,
+      routeContext.house.public_code,
+      100,
+      0
+    );
+
     return withMiniDoor(
       <FacturasWifiScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        invoices={invoicesHistory}
+        canMarkInvoicesPaid={isHouseAdmin}
       />,
       routeContext.dashboardPath,
       "facturas"
@@ -249,10 +287,19 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   }
 
   if (sectionPath === "facturas/agua") {
+    const invoicesHistory = await loadHouseInvoiceHistoryWithClient(
+      routeContext.supabase,
+      routeContext.house.public_code,
+      100,
+      0
+    );
+
     return withMiniDoor(
       <FacturasAguaScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        invoices={invoicesHistory}
+        canMarkInvoicesPaid={isHouseAdmin}
       />,
       routeContext.dashboardPath,
       "facturas"
@@ -260,10 +307,45 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   }
 
   if (sectionPath === "facturas/luz") {
+    const invoicesHistory = await loadHouseInvoiceHistoryWithClient(
+      routeContext.supabase,
+      routeContext.house.public_code,
+      100,
+      0
+    );
+
     return withMiniDoor(
       <FacturasLuzScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        invoices={invoicesHistory}
+        canMarkInvoicesPaid={isHouseAdmin}
+      />,
+      routeContext.dashboardPath,
+      "facturas"
+    );
+  }
+
+  if (sectionPath.startsWith("facturas/")) {
+    const categorySlug = sectionPath.replace(/^facturas\//, "");
+    const invoicesHistory = await loadHouseInvoiceHistoryWithClient(
+      routeContext.supabase,
+      routeContext.house.public_code,
+      100,
+      0
+    );
+    const categoryName =
+      invoicesHistory.find((invoice) => invoice.category_slug === categorySlug)
+        ?.category_name ?? "Historial";
+
+    return withMiniDoor(
+      <FacturasHistoryScreen
+        houseCode={routeContext.house.public_code}
+        dashboardPath={routeContext.dashboardPath}
+        title={`Facturas ${categoryName}`}
+        invoices={invoicesHistory}
+        categorySlug={categorySlug}
+        canMarkInvoicesPaid={isHouseAdmin}
       />,
       routeContext.dashboardPath,
       "facturas"

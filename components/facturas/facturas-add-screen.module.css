@@ -130,6 +130,49 @@
   place-items: center;
 }
 
+.fieldsGrid {
+  margin-top: 0.8rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.fieldGroup,
+.manualCategory {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.manualCategory {
+  margin-top: 0.75rem;
+  max-width: 320px;
+}
+
+.fieldLabel {
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+}
+
+.fieldInput,
+.fieldTextarea {
+  width: 100%;
+  border: 1.5px solid #8b1a2f;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0.48rem 0.55rem;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  outline: none;
+}
+
+.fieldTextarea {
+  margin-top: 0.5rem;
+  min-height: 76px;
+  resize: vertical;
+}
+
 .typesRow {
   margin-top: 0.5rem;
   display: flex;
@@ -175,6 +218,23 @@
   color: #1f1a17;
   font-family: "Poppins", sans-serif;
   font-size: 15px;
+}
+
+.memberRole {
+  color: #8b1a2f;
+  font-size: 12px;
+}
+
+.emptyCopy,
+.feedbackMessage {
+  margin: 0.55rem 0 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+}
+
+.feedbackMessage {
+  color: #8b1a2f;
 }
 
 .dateTrigger {
@@ -227,6 +287,11 @@
   line-height: 1;
 }
 
+.saveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 @media (max-width: 900px) {
   .panel {
     width: min(100%, 650px);
@@ -240,5 +305,9 @@
 
   .typesRow {
     gap: 0.7rem 0.95rem;
+  }
+
+  .fieldsGrid {
+    grid-template-columns: 1fr;
   }
 }

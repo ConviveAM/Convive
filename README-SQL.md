@@ -4306,3 +4306,292 @@ end;
 $$;
 
 grant execute on function public.get_house_expenses_dashboard(text, int, int) to authenticated;
+
+drop function if exists public.get_add_invoice_form_options(text);
+drop function if exists public.get_house_invoices_dashboard(text, integer);
+drop function if exists public.get_house_invoice_history(text, uuid, integer, integer);
+drop function if exists public.admin_mark_invoice_paid(text, uuid, text);
+
+
+create function public.get_add_invoice_form_options(
+  p_house_public_code text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_result jsonb;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  v_result := jsonb_build_object(
+    'members',
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'profile_id', hm.profile_id,
+          'display_name', public.profile_display_name(hm.profile_id),
+          'role', hm.role
+        )
+        order by public.profile_display_name(hm.profile_id)
+      )
+      from public.house_members hm
+      where hm.house_id = v_house_id
+        and hm.is_active = true
+    ), '[]'::jsonb),
+    'invoice_categories',
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'category_id', ic.id,
+          'category_key', ic.category_key,
+          'name', ic.name,
+          'is_builtin', ic.is_builtin,
+          'is_custom', (ic.house_id is not null)
+        )
+        order by ic.sort_order, ic.name
+      )
+      from public.invoice_categories ic
+      where ic.is_active = true
+        and (ic.house_id is null or ic.house_id = v_house_id)
+    ), '[]'::jsonb),
+    'allow_custom_category', true
+  );
+
+  return v_result;
+end;
+$$;
+
+grant execute on function public.get_add_invoice_form_options(text) to authenticated;
+
+
+create function public.get_house_invoices_dashboard(
+  p_house_public_code text,
+  p_limit_per_category int default 5
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_result jsonb;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  v_result := (
+    with cats as (
+      select
+        ic.id,
+        ic.category_key,
+        ic.name,
+        ic.sort_order
+      from public.invoice_categories ic
+      where ic.is_active = true
+        and (ic.house_id is null or ic.house_id = v_house_id)
+    )
+    select jsonb_build_object(
+      'categories',
+      coalesce(jsonb_agg(
+        jsonb_build_object(
+          'category_id', c.id,
+          'category_key', c.category_key,
+          'name', c.name,
+          'items', coalesce((
+            select jsonb_agg(
+              jsonb_build_object(
+                'expense_id', se.id,
+                'title', se.title,
+                'invoice_date', se.expense_date,
+                'total_amount', se.total_amount,
+                'currency', se.currency,
+                'settlement_status', se.settlement_status,
+                'participants_text', coalesce((
+                  select string_agg(
+                    public.profile_display_name(ep.profile_id),
+                    ', '
+                    order by public.profile_display_name(ep.profile_id)
+                  )
+                  from public.expense_participants ep
+                  where ep.expense_id = se.id
+                    and ep.is_waived = false
+                ), ''),
+                'can_mark_paid', public.is_house_admin(v_house_id),
+                'invoice_file_path', se.invoice_file_path
+              )
+              order by se.expense_date desc, se.created_at desc
+            )
+            from (
+              select *
+              from public.shared_expenses se2
+              where se2.house_id = v_house_id
+                and se2.expense_type = 'invoice'
+                and se2.invoice_category_id = c.id
+                and se2.status = 'active'
+                and coalesce(se2.settlement_status, 'open') <> 'settled'
+              order by se2.expense_date desc, se2.created_at desc
+              limit greatest(p_limit_per_category, 1)
+            ) se
+          ), '[]'::jsonb)
+        )
+        order by c.sort_order, c.name
+      ), '[]'::jsonb)
+    )
+    from cats c
+  );
+
+  return v_result;
+end;
+$$;
+
+grant execute on function public.get_house_invoices_dashboard(text, int) to authenticated;
+
+
+create function public.get_house_invoice_history(
+  p_house_public_code text,
+  p_invoice_category_id uuid default null,
+  p_limit int default 50,
+  p_offset int default 0
+)
+returns table (
+  expense_id uuid,
+  category_id uuid,
+  category_name text,
+  category_key text,
+  title text,
+  invoice_date date,
+  total_amount numeric(10,2),
+  currency text,
+  settlement_status text,
+  invoice_paid_at timestamptz,
+  participants_text text,
+  can_mark_paid boolean,
+  invoice_file_path text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    se.id as expense_id,
+    ic.id as category_id,
+    ic.name as category_name,
+    ic.category_key,
+    se.title,
+    se.expense_date as invoice_date,
+    se.total_amount,
+    se.currency,
+    coalesce(se.settlement_status, 'open') as settlement_status,
+    se.invoice_paid_at,
+    coalesce((
+      select string_agg(
+        public.profile_display_name(ep.profile_id),
+        ', '
+        order by public.profile_display_name(ep.profile_id)
+      )
+      from public.expense_participants ep
+      where ep.expense_id = se.id
+        and ep.is_waived = false
+    ), '') as participants_text,
+    public.is_house_admin(v_house_id) as can_mark_paid,
+    se.invoice_file_path
+  from public.shared_expenses se
+  left join public.invoice_categories ic
+    on ic.id = se.invoice_category_id
+  where se.house_id = v_house_id
+    and se.expense_type = 'invoice'
+    and se.status = 'active'
+    and (p_invoice_category_id is null or se.invoice_category_id = p_invoice_category_id)
+  order by se.expense_date desc, se.created_at desc
+  limit greatest(p_limit, 1)
+  offset greatest(p_offset, 0);
+end;
+$$;
+
+grant execute on function public.get_house_invoice_history(text, uuid, int, int) to authenticated;
+
+
+create function public.admin_mark_invoice_paid(
+  p_house_public_code text,
+  p_expense_id uuid,
+  p_note text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not public.is_house_admin(v_house_id) then
+    raise exception 'Solo un admin puede marcar una factura como pagada';
+  end if;
+
+  if not exists (
+    select 1
+    from public.shared_expenses se
+    where se.id = p_expense_id
+      and se.house_id = v_house_id
+      and se.expense_type = 'invoice'
+      and se.status = 'active'
+  ) then
+    raise exception 'Factura no encontrada';
+  end if;
+
+  update public.expense_participants
+  set
+    status = 'paid',
+    updated_at = now()
+  where expense_id = p_expense_id
+    and is_waived = false;
+
+  update public.shared_expenses
+  set
+    settlement_status = 'settled',
+    settled_at = now(),
+    invoice_paid_at = now(),
+    updated_at = now()
+  where id = p_expense_id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'invoice',
+    p_expense_id,
+    'marked_paid',
+    jsonb_build_object('note', p_note)
+  );
+
+  return jsonb_build_object(
+    'expense_id', p_expense_id,
+    'status', 'settled'
+  );
+end;
+$$;
+
+grant execute on function public.admin_mark_invoice_paid(text, uuid, text) to authenticated;

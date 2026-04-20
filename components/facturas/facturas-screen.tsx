@@ -1,7 +1,16 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+
+import { adminMarkInvoicePaidAction } from "../../app/actions/invoice-actions";
+import {
+  formatCurrency,
+  formatShortDate,
+} from "../../lib/dashboard-presenters";
+import type { InvoiceCategorySection } from "../../lib/dashboard-types";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import styles from "./facturas-screen.module.css";
@@ -9,90 +18,205 @@ import styles from "./facturas-screen.module.css";
 type FacturasScreenProps = {
   houseCode: string;
   dashboardPath: string;
+  sections?: InvoiceCategorySection[];
+  canMarkInvoicesPaid?: boolean;
 };
 
-const sections = [
-  { key: "alquiler", title: "Alquiler", text: "Factura de el alquiler", date: "15 de Mayo" },
-  { key: "suscripciones", title: "Suscripciones", text: "Factura de netflix", date: "15 de Mayo" },
-  { key: "wifi", title: "Wifi", text: "Factura de el wifi", date: "15 de Mayo" },
-  { key: "agua", title: "Agua", text: "Factura de el agua", date: "15 de Mayo" },
-  { key: "luz", title: "Luz", text: "Factura de la luz", date: "15 de Mayo" },
-];
+function resolveInvoiceHref(filePath: string | null) {
+  if (!filePath) {
+    return null;
+  }
+
+  if (filePath.startsWith("http") || filePath.startsWith("/")) {
+    return filePath;
+  }
+
+  return null;
+}
 
 export function FacturasScreen({
   houseCode,
   dashboardPath,
+  sections = [],
+  canMarkInvoicesPaid = false,
 }: FacturasScreenProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [pendingExpenseId, setPendingExpenseId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const basePath = dashboardPath;
+
+  const handleMarkPaid = (expenseId: string) => {
+    setErrorMessage(null);
+    setPendingExpenseId(expenseId);
+
+    startTransition(async () => {
+      const result = await adminMarkInvoicePaidAction({
+        houseCode,
+        dashboardPath: basePath,
+        expenseId,
+      });
+
+      setPendingExpenseId(null);
+
+      if (result.success) {
+        router.refresh();
+        return;
+      }
+
+      if ("error" in result) {
+        setErrorMessage(result.error);
+      }
+    });
+  };
+
   return (
     <main className={styles.page}>
       <section className={styles.panel}>
         <header className={styles.header}>
           <Link href={`${basePath}/menu`} className={styles.backLink}>
-            <Image src="/iconos/flechaatras.svg" alt="Volver" width={20} height={20} className={styles.backIcon} />
+            <Image
+              src="/iconos/flechaatras.svg"
+              alt="Volver"
+              width={20}
+              height={20}
+              className={styles.backIcon}
+            />
           </Link>
           <div className={styles.headerCenter}>
             <h1 className={styles.title}>Facturas</h1>
             <p className={styles.subtitle}>Gestiona las facturas del piso de forma clara</p>
           </div>
-          <Link href={`${basePath}/facturas/anadir-factura`} className={styles.headerPlusLink} aria-label="Añadir factura">
-            <Image src="/iconos/A%C3%B1adir.svg" alt="Añadir" width={24} height={24} className={styles.headerPlusIcon} />
+          <Link
+            href={`${basePath}/facturas/anadir-factura`}
+            className={styles.headerPlusLink}
+            aria-label="Anadir factura"
+          >
+            <Image
+              src="/iconos/A%C3%B1adir.svg"
+              alt="Anadir"
+              width={24}
+              height={24}
+              className={styles.headerPlusIcon}
+            />
           </Link>
         </header>
 
         <div className={styles.content}>
-          {sections.map((section) => (
-            <Card key={section.key} className={styles.group}>
-              <div className={styles.groupTop}>
-                <div className={styles.groupTitleWrap}>
-                  <h2 className={styles.groupTitle}>{section.title}</h2>
-                </div>
-                <Link
-                  href={
-                    section.key === "alquiler"
-                      ? `${basePath}/facturas/alquiler`
-                      : section.key === "suscripciones"
-                        ? `${basePath}/facturas/suscripciones`
-                        : section.key === "wifi"
-                          ? `${basePath}/facturas/wifi`
-                          : section.key === "agua"
-                            ? `${basePath}/facturas/agua`
-                            : section.key === "luz"
-                              ? `${basePath}/facturas/luz`
-                              : `${basePath}/facturas`
-                  }
-                  className={styles.viewAll}
-                >
-                  <span className={styles.viewAllContent}>
-                    Ver todo
-                    <Image src="/iconos/flechascalendario.svg" alt="" width={14} height={14} className={styles.viewAllArrow} />
-                  </span>
-                </Link>
-              </div>
+          {errorMessage ? (
+            <p className={styles.feedbackMessage}>{errorMessage}</p>
+          ) : null}
 
+          {sections.length ? (
+            sections.map((section) => (
               <Card
-                className={`${styles.paper} ${styles.paperStack} ${
-                  section.key === "suscripciones" || section.key === "wifi" || section.key === "luz" ? styles.paperStackTwo : ""
-                }`}
+                key={section.category_id ?? section.category_slug}
+                className={styles.group}
               >
-                <div className={styles.paperRow}>
-                  <div className={styles.left}>
-                    <Image src="/iconos/building-2-svgrepo-com 1.svg" alt="" width={20} height={20} />
-                    <div>
-                      <p className={styles.mainText}>{section.text}</p>
-                      <p className={styles.dateText}>{section.date}</p>
-                    </div>
+                <div className={styles.groupTop}>
+                  <div className={styles.groupTitleWrap}>
+                    <h2 className={styles.groupTitle}>{section.category_name}</h2>
                   </div>
-                  <p className={styles.amount}>{"23\u20AC"}</p>
-                  <Button className={styles.actionButton}>Ver factura</Button>
+                  <Link
+                    href={`${basePath}/facturas/${section.category_slug}`}
+                    className={styles.viewAll}
+                  >
+                    <span className={styles.viewAllContent}>
+                      Ver todo
+                      <Image
+                        src="/iconos/flechascalendario.svg"
+                        alt=""
+                        width={14}
+                        height={14}
+                        className={styles.viewAllArrow}
+                      />
+                    </span>
+                  </Link>
                 </div>
+
+                <Card
+                  className={`${styles.paper} ${styles.paperStack} ${
+                    section.invoices.length < 2 ? styles.paperStackTwo : ""
+                  }`}
+                >
+                  {section.invoices.length ? (
+                    section.invoices.map((invoice) => {
+                      const invoiceHref = resolveInvoiceHref(
+                        invoice.invoice_file_path
+                      );
+                      const canMarkPaid =
+                        canMarkInvoicesPaid && invoice.can_mark_paid;
+
+                      return (
+                        <div className={styles.paperRow} key={invoice.expense_id}>
+                          <div className={styles.left}>
+                            <Image
+                              src="/iconos/building-2-svgrepo-com 1.svg"
+                              alt=""
+                              width={20}
+                              height={20}
+                            />
+                            <div>
+                              <p className={styles.mainText}>{invoice.title}</p>
+                              <p className={styles.dateText}>
+                                {formatShortDate(invoice.invoice_date)}
+                              </p>
+                            </div>
+                          </div>
+                          <p className={styles.amount}>
+                            {formatCurrency(
+                              invoice.total_amount,
+                              invoice.currency
+                            )}
+                          </p>
+                          {invoiceHref ? (
+                            <Link
+                              href={invoiceHref}
+                              className={`convive-button ${styles.actionButton}`}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Ver factura
+                            </Link>
+                          ) : (
+                            <Button className={styles.actionButton} disabled>
+                              Ver factura
+                            </Button>
+                          )}
+                          {canMarkPaid ? (
+                            <Button
+                              className={styles.actionButton}
+                              onClick={() => handleMarkPaid(invoice.expense_id)}
+                              disabled={
+                                isPending &&
+                                pendingExpenseId === invoice.expense_id
+                              }
+                            >
+                              {isPending &&
+                              pendingExpenseId === invoice.expense_id
+                                ? "Marcando..."
+                                : "Marcar pagada"}
+                            </Button>
+                          ) : null}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className={styles.emptyState}>
+                      No hay facturas activas en esta categoria.
+                    </p>
+                  )}
+                </Card>
+                <div className={styles.groupFooter} aria-hidden="true" />
               </Card>
-              <div className={styles.groupFooter} aria-hidden="true" />
+            ))
+          ) : (
+            <Card className={styles.group}>
+              <p className={styles.emptyState}>Todavia no hay facturas activas.</p>
             </Card>
-          ))}
+          )}
         </div>
       </section>
     </main>
   );
 }
-
