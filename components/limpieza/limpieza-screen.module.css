@@ -84,7 +84,7 @@
 
 .topActions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;
   margin-bottom: 1rem;
 }
@@ -157,6 +157,25 @@
   text-transform: uppercase;
 }
 
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.viewAllButton {
+  border: 0;
+  background: transparent;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.2rem 0;
+  white-space: nowrap;
+}
+
 .groupRows {
   margin-top: 0.35rem;
   display: grid;
@@ -173,10 +192,24 @@
   align-items: start;
 }
 
+.taskDetailsButton {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.45rem;
+  align-items: start;
+  cursor: pointer;
+  text-align: left;
+}
+
 .taskLeft {
   display: grid;
   grid-template-columns: 22px 1fr;
   gap: 0.35rem;
+  min-width: 0;
 }
 
 .taskLeft p {
@@ -199,6 +232,34 @@
   color: #1f1a17;
   font-size: 11px;
   font-family: "Poppins", sans-serif;
+  text-align: right;
+  max-width: 72px;
+  overflow-wrap: anywhere;
+}
+
+.taskCheckbox {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid #8b1a2f;
+  border-radius: 2px;
+  background: transparent;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.15rem;
+}
+
+.taskCheckbox[data-state="checked"] {
+  background: #8b1a2f;
+}
+
+.emptyText {
+  margin: 0.35rem 0 0;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
 }
 
 .floorWrap {
@@ -253,6 +314,219 @@
   font-size: 9px;
 }
 
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(31, 26, 23, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modalCard {
+  width: min(100%, 620px);
+  max-height: min(90svh, 760px);
+  overflow-y: auto;
+  border: none;
+  border-radius: 8px;
+  background: #f0ebe6;
+  padding: 1rem;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+}
+
+.modalTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.modalTitle {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.closeButton {
+  border: 0;
+  background: transparent;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0.35rem 0;
+}
+
+.formGrid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.fieldGroup {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+}
+
+.fieldInput,
+.fieldSelect,
+.fieldTextarea {
+  width: 100%;
+  border: 1.5px solid #8b1a2f;
+  border-radius: 8px;
+  background: #f0eae4;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  padding: 0.72rem 0.78rem;
+  outline: none;
+}
+
+.fieldTextarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.dateTrigger {
+  width: 155px;
+  height: 38px;
+  border: 1.5px solid #8b1a2f;
+  border-radius: 8px;
+  background: transparent;
+  color: #1f1a17;
+  justify-content: space-between;
+  padding: 0 0.55rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+}
+
+.dateArrow {
+  width: 14px;
+  height: 14px;
+  transform: rotate(-90deg);
+  display: block;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%) hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.calendarPopover {
+  background: #f0ebe6;
+  border: 1px solid #d8d0cb;
+  border-radius: 8px;
+  padding: 0.45rem;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+  z-index: 60;
+}
+
+.calendar {
+  margin: 0;
+}
+
+.feedbackMessage,
+.modalCopy,
+.emptyModalText {
+  margin: 0.75rem 0 0;
+  color: #3a3532;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+}
+
+.feedbackMessage {
+  color: #8b1a2f;
+  font-weight: 500;
+}
+
+.modalActions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.saveButton {
+  background: #be6f8b;
+  color: #f0eae4;
+  border-radius: 8px;
+  padding: 0.78rem 1.4rem;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.taskInfoList {
+  margin: 1rem 0 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.taskInfoList div {
+  background: #fff8f2;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+}
+
+.taskInfoList dt {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.taskInfoList dd {
+  margin: 0.15rem 0 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.historyList {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.historyRow {
+  background: #fff8f2;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.historyRow p {
+  margin: 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+}
+
+.historyRow small {
+  color: #5a5652;
+  font-size: 11px;
+  display: block;
+  margin-top: 0.12rem;
+}
+
+.historyRow span {
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+  text-align: right;
+}
+
 @media (max-width: 900px) {
   .panel {
     width: min(100%, 650px);
@@ -269,6 +543,10 @@
 
   .groupsScroll {
     max-height: none;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
   }
 }
 

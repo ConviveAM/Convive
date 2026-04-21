@@ -1,6 +1,9 @@
 import { FacturasAddScreen } from "../../../../../../components/facturas/facturas-add-screen";
 import { MiniDoorLink } from "../../../../../../components/ui/mini-door-link";
-import { getAccessibleHouseContext } from "../../../../../../lib/dashboard";
+import {
+  getAccessibleHouseContext,
+  loadAddInvoiceFormOptionsWithClient,
+} from "../../../../../../lib/dashboard";
 
 type FacturasAddPageProps = {
   params: Promise<{
@@ -12,6 +15,10 @@ type FacturasAddPageProps = {
 export default async function FacturasAddPage({ params }: FacturasAddPageProps) {
   const { userCode, houseCode } = await params;
   const routeContext = await getAccessibleHouseContext(userCode, houseCode);
+  const formOptions = await loadAddInvoiceFormOptionsWithClient(
+    routeContext.supabase,
+    routeContext.house.public_code
+  );
 
   return (
     <>
@@ -23,6 +30,7 @@ export default async function FacturasAddPage({ params }: FacturasAddPageProps) 
       <FacturasAddScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        formOptions={formOptions}
       />
     </>
   );

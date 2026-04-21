@@ -4306,3 +4306,1037 @@ end;
 $$;
 
 grant execute on function public.get_house_expenses_dashboard(text, int, int) to authenticated;
+
+drop function if exists public.get_add_invoice_form_options(text);
+drop function if exists public.get_house_invoices_dashboard(text, integer);
+drop function if exists public.get_house_invoice_history(text, uuid, integer, integer);
+drop function if exists public.admin_mark_invoice_paid(text, uuid, text);
+
+
+create function public.get_add_invoice_form_options(
+  p_house_public_code text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_result jsonb;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  v_result := jsonb_build_object(
+    'members',
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'profile_id', hm.profile_id,
+          'display_name', public.profile_display_name(hm.profile_id),
+          'role', hm.role
+        )
+        order by public.profile_display_name(hm.profile_id)
+      )
+      from public.house_members hm
+      where hm.house_id = v_house_id
+        and hm.is_active = true
+    ), '[]'::jsonb),
+    'invoice_categories',
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'category_id', ic.id,
+          'category_key', ic.category_key,
+          'name', ic.name,
+          'is_builtin', ic.is_builtin,
+          'is_custom', (ic.house_id is not null)
+        )
+        order by ic.sort_order, ic.name
+      )
+      from public.invoice_categories ic
+      where ic.is_active = true
+        and (ic.house_id is null or ic.house_id = v_house_id)
+    ), '[]'::jsonb),
+    'allow_custom_category', true
+  );
+
+  return v_result;
+end;
+$$;
+
+grant execute on function public.get_add_invoice_form_options(text) to authenticated;
+
+
+create function public.get_house_invoices_dashboard(
+  p_house_public_code text,
+  p_limit_per_category int default 5
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_result jsonb;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  v_result := (
+    with cats as (
+      select
+        ic.id,
+        ic.category_key,
+        ic.name,
+        ic.sort_order
+      from public.invoice_categories ic
+      where ic.is_active = true
+        and (ic.house_id is null or ic.house_id = v_house_id)
+    )
+    select jsonb_build_object(
+      'categories',
+      coalesce(jsonb_agg(
+        jsonb_build_object(
+          'category_id', c.id,
+          'category_key', c.category_key,
+          'name', c.name,
+          'items', coalesce((
+            select jsonb_agg(
+              jsonb_build_object(
+                'expense_id', se.id,
+                'title', se.title,
+                'invoice_date', se.expense_date,
+                'total_amount', se.total_amount,
+                'currency', se.currency,
+                'settlement_status', se.settlement_status,
+                'participants_text', coalesce((
+                  select string_agg(
+                    public.profile_display_name(ep.profile_id),
+                    ', '
+                    order by public.profile_display_name(ep.profile_id)
+                  )
+                  from public.expense_participants ep
+                  where ep.expense_id = se.id
+                    and ep.is_waived = false
+                ), ''),
+                'can_mark_paid', public.is_house_admin(v_house_id),
+                'invoice_file_path', se.invoice_file_path
+              )
+              order by se.expense_date desc, se.created_at desc
+            )
+            from (
+              select *
+              from public.shared_expenses se2
+              where se2.house_id = v_house_id
+                and se2.expense_type = 'invoice'
+                and se2.invoice_category_id = c.id
+                and se2.status = 'active'
+                and coalesce(se2.settlement_status, 'open') <> 'settled'
+              order by se2.expense_date desc, se2.created_at desc
+              limit greatest(p_limit_per_category, 1)
+            ) se
+          ), '[]'::jsonb)
+        )
+        order by c.sort_order, c.name
+      ), '[]'::jsonb)
+    )
+    from cats c
+  );
+
+  return v_result;
+end;
+$$;
+
+grant execute on function public.get_house_invoices_dashboard(text, int) to authenticated;
+
+
+create function public.get_house_invoice_history(
+  p_house_public_code text,
+  p_invoice_category_id uuid default null,
+  p_limit int default 50,
+  p_offset int default 0
+)
+returns table (
+  expense_id uuid,
+  category_id uuid,
+  category_name text,
+  category_key text,
+  title text,
+  invoice_date date,
+  total_amount numeric(10,2),
+  currency text,
+  settlement_status text,
+  invoice_paid_at timestamptz,
+  participants_text text,
+  can_mark_paid boolean,
+  invoice_file_path text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    se.id as expense_id,
+    ic.id as category_id,
+    ic.name as category_name,
+    ic.category_key,
+    se.title,
+    se.expense_date as invoice_date,
+    se.total_amount,
+    se.currency,
+    coalesce(se.settlement_status, 'open') as settlement_status,
+    se.invoice_paid_at,
+    coalesce((
+      select string_agg(
+        public.profile_display_name(ep.profile_id),
+        ', '
+        order by public.profile_display_name(ep.profile_id)
+      )
+      from public.expense_participants ep
+      where ep.expense_id = se.id
+        and ep.is_waived = false
+    ), '') as participants_text,
+    public.is_house_admin(v_house_id) as can_mark_paid,
+    se.invoice_file_path
+  from public.shared_expenses se
+  left join public.invoice_categories ic
+    on ic.id = se.invoice_category_id
+  where se.house_id = v_house_id
+    and se.expense_type = 'invoice'
+    and se.status = 'active'
+    and (p_invoice_category_id is null or se.invoice_category_id = p_invoice_category_id)
+  order by se.expense_date desc, se.created_at desc
+  limit greatest(p_limit, 1)
+  offset greatest(p_offset, 0);
+end;
+$$;
+
+grant execute on function public.get_house_invoice_history(text, uuid, int, int) to authenticated;
+
+
+create function public.admin_mark_invoice_paid(
+  p_house_public_code text,
+  p_expense_id uuid,
+  p_note text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not public.is_house_admin(v_house_id) then
+    raise exception 'Solo un admin puede marcar una factura como pagada';
+  end if;
+
+  if not exists (
+    select 1
+    from public.shared_expenses se
+    where se.id = p_expense_id
+      and se.house_id = v_house_id
+      and se.expense_type = 'invoice'
+      and se.status = 'active'
+  ) then
+    raise exception 'Factura no encontrada';
+  end if;
+
+  update public.expense_participants
+  set
+    status = 'paid',
+    updated_at = now()
+  where expense_id = p_expense_id
+    and is_waived = false;
+
+  update public.shared_expenses
+  set
+    settlement_status = 'settled',
+    settled_at = now(),
+    invoice_paid_at = now(),
+    updated_at = now()
+  where id = p_expense_id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'invoice',
+    p_expense_id,
+    'marked_paid',
+    jsonb_build_object('note', p_note)
+  );
+
+  return jsonb_build_object(
+    'expense_id', p_expense_id,
+    'status', 'settled'
+  );
+end;
+$$;
+
+grant execute on function public.admin_mark_invoice_paid(text, uuid, text) to authenticated;
+
+-- =========================================================
+-- CONVIVE - MÓDULO LIMPIEZA
+-- Zonas + tareas + rotación + histórico
+-- =========================================================
+
+-- =========================================================
+-- 0) LIMPIEZA DE FUNCIONES / TABLAS SI CHOCAN
+-- =========================================================
+
+drop function if exists public.get_add_cleaning_task_form_options(text);
+drop function if exists public.create_cleaning_task(text, text, date, uuid, uuid, text, text);
+drop function if exists public.rotate_cleaning_tasks(text, uuid, uuid, text);
+drop function if exists public.get_house_cleaning_dashboard(text, integer);
+drop function if exists public.get_house_cleaning_task_history(text, uuid, integer, integer);
+
+-- =========================================================
+-- 1) TABLAS NUEVAS
+-- =========================================================
+
+create table if not exists public.cleaning_zones (
+  id uuid primary key default gen_random_uuid(),
+  house_id uuid references public.houses(id) on delete cascade,
+  zone_key text not null,
+  name text not null,
+  normalized_name text generated always as (lower(btrim(name))) stored,
+  is_builtin boolean not null default false,
+  sort_order int not null default 100,
+  is_active boolean not null default true,
+  created_by_profile_id uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.cleaning_tasks (
+  id uuid primary key default gen_random_uuid(),
+  house_id uuid not null references public.houses(id) on delete cascade,
+  zone_id uuid not null references public.cleaning_zones(id) on delete restrict,
+  created_by_profile_id uuid not null references public.profiles(id) on delete restrict,
+  assigned_to_profile_id uuid not null references public.profiles(id) on delete restrict,
+  title text not null,
+  description text,
+  due_date date not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'done', 'archived')),
+  sort_order int not null default 100,
+  completed_by_profile_id uuid references public.profiles(id) on delete set null,
+  completed_at timestamptz,
+  rotated_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- =========================================================
+-- 2) ÍNDICES
+-- =========================================================
+
+create unique index if not exists cleaning_zones_global_key_uidx
+on public.cleaning_zones (zone_key)
+where house_id is null;
+
+create unique index if not exists cleaning_zones_house_name_uidx
+on public.cleaning_zones (house_id, normalized_name)
+where house_id is not null;
+
+create index if not exists cleaning_zones_house_active_idx
+on public.cleaning_zones (house_id, is_active, sort_order, name);
+
+create index if not exists cleaning_tasks_house_zone_status_idx
+on public.cleaning_tasks (house_id, zone_id, status, due_date);
+
+create index if not exists cleaning_tasks_assigned_idx
+on public.cleaning_tasks (assigned_to_profile_id, status, due_date);
+
+create index if not exists cleaning_tasks_house_created_idx
+on public.cleaning_tasks (house_id, created_at desc);
+
+-- =========================================================
+-- 3) UPDATED_AT
+-- Asume que public.set_updated_at() ya existe
+-- =========================================================
+
+drop trigger if exists set_cleaning_zones_updated_at on public.cleaning_zones;
+create trigger set_cleaning_zones_updated_at
+before update on public.cleaning_zones
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_cleaning_tasks_updated_at on public.cleaning_tasks;
+create trigger set_cleaning_tasks_updated_at
+before update on public.cleaning_tasks
+for each row execute function public.set_updated_at();
+
+-- =========================================================
+-- 4) RLS
+-- =========================================================
+
+alter table public.cleaning_zones enable row level security;
+alter table public.cleaning_tasks enable row level security;
+
+drop policy if exists "cleaning_zones_select_if_member" on public.cleaning_zones;
+create policy "cleaning_zones_select_if_member"
+on public.cleaning_zones
+for select
+to authenticated
+using (
+  house_id is null
+  or public.is_house_member(house_id)
+  or public.is_house_creator(house_id)
+);
+
+drop policy if exists "cleaning_tasks_select_if_member" on public.cleaning_tasks;
+create policy "cleaning_tasks_select_if_member"
+on public.cleaning_tasks
+for select
+to authenticated
+using (
+  public.is_house_member(house_id)
+  or public.is_house_creator(house_id)
+);
+
+-- =========================================================
+-- 5) SEED DE ZONAS BASE
+-- =========================================================
+
+insert into public.cleaning_zones (
+  house_id,
+  zone_key,
+  name,
+  is_builtin,
+  sort_order,
+  is_active,
+  created_by_profile_id
+)
+values
+  (null, 'kitchen', 'Cocina', true, 10, true, null),
+  (null, 'living_room', 'Salón', true, 20, true, null),
+  (null, 'bathroom', 'Baño', true, 30, true, null),
+  (null, 'hallway', 'Recibidor', true, 40, true, null)
+on conflict do nothing;
+
+-- =========================================================
+-- 6) OPCIONES DEL FORMULARIO "AÑADIR TAREA"
+-- - miembros reales
+-- - zonas reales
+-- - bandera para permitir zona manual
+-- =========================================================
+
+create function public.get_add_cleaning_task_form_options(
+  p_house_public_code text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_result jsonb;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  v_result := jsonb_build_object(
+    'members',
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'profile_id', hm.profile_id,
+          'display_name', public.profile_display_name(hm.profile_id),
+          'role', hm.role
+        )
+        order by public.profile_display_name(hm.profile_id)
+      )
+      from public.house_members hm
+      where hm.house_id = v_house_id
+        and hm.is_active = true
+    ), '[]'::jsonb),
+    'zones',
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'zone_id', cz.id,
+          'zone_key', cz.zone_key,
+          'name', cz.name,
+          'is_builtin', cz.is_builtin,
+          'is_custom', (cz.house_id is not null)
+        )
+        order by cz.sort_order, cz.name
+      )
+      from public.cleaning_zones cz
+      where cz.is_active = true
+        and (cz.house_id is null or cz.house_id = v_house_id)
+    ), '[]'::jsonb),
+    'allow_custom_zone', true
+  );
+
+  return v_result;
+end;
+$$;
+
+grant execute on function public.get_add_cleaning_task_form_options(text) to authenticated;
+
+-- =========================================================
+-- 7) CREAR TAREA DE LIMPIEZA
+-- - zona existente o zona manual
+-- - miembro asignado real
+-- - fecha real
+-- - auditoría
+-- =========================================================
+
+create function public.create_cleaning_task(
+  p_house_public_code text,
+  p_title text,
+  p_due_date date,
+  p_assigned_profile_id uuid,
+  p_zone_id uuid,
+  p_custom_zone_name text,
+  p_notes text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_zone_id uuid;
+  v_task_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not (public.is_house_member(v_house_id) or public.is_house_creator(v_house_id)) then
+    raise exception 'Sin acceso a la casa';
+  end if;
+
+  if p_title is null or length(trim(p_title)) = 0 then
+    raise exception 'El título de la tarea es obligatorio';
+  end if;
+
+  if p_due_date is null then
+    raise exception 'La fecha de la tarea es obligatoria';
+  end if;
+
+  if p_assigned_profile_id is null then
+    raise exception 'Debes seleccionar una persona';
+  end if;
+
+  if not exists (
+    select 1
+    from public.house_members hm
+    where hm.house_id = v_house_id
+      and hm.profile_id = p_assigned_profile_id
+      and hm.is_active = true
+  ) then
+    raise exception 'La persona asignada no pertenece a la casa';
+  end if;
+
+  if p_custom_zone_name is not null and length(trim(p_custom_zone_name)) > 0 then
+    select cz.id
+    into v_zone_id
+    from public.cleaning_zones cz
+    where cz.house_id = v_house_id
+      and cz.normalized_name = lower(btrim(p_custom_zone_name))
+    limit 1;
+
+    if v_zone_id is null then
+      insert into public.cleaning_zones (
+        house_id,
+        zone_key,
+        name,
+        is_builtin,
+        sort_order,
+        is_active,
+        created_by_profile_id
+      )
+      values (
+        v_house_id,
+        'custom_' || substring(gen_random_uuid()::text from 1 for 8),
+        trim(p_custom_zone_name),
+        false,
+        200,
+        true,
+        auth.uid()
+      )
+      returning id into v_zone_id;
+    end if;
+  else
+    select cz.id
+    into v_zone_id
+    from public.cleaning_zones cz
+    where cz.id = p_zone_id
+      and cz.is_active = true
+      and (cz.house_id is null or cz.house_id = v_house_id)
+    limit 1;
+
+    if v_zone_id is null then
+      raise exception 'Debes seleccionar una zona válida o escribir una manual';
+    end if;
+  end if;
+
+  insert into public.cleaning_tasks (
+    house_id,
+    zone_id,
+    created_by_profile_id,
+    assigned_to_profile_id,
+    title,
+    description,
+    due_date,
+    status,
+    sort_order
+  )
+  values (
+    v_house_id,
+    v_zone_id,
+    auth.uid(),
+    p_assigned_profile_id,
+    trim(p_title),
+    p_notes,
+    p_due_date,
+    'pending',
+    100
+  )
+  returning id into v_task_id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'cleaning_task',
+    v_task_id,
+    'created',
+    jsonb_build_object(
+      'title', p_title,
+      'due_date', p_due_date,
+      'assigned_to_profile_id', p_assigned_profile_id,
+      'zone_id', v_zone_id,
+      'custom_zone_name', p_custom_zone_name,
+      'notes', p_notes
+    )
+  );
+
+  return jsonb_build_object(
+    'task_id', v_task_id,
+    'zone_id', v_zone_id,
+    'house_public_code', p_house_public_code
+  );
+end;
+$$;
+
+grant execute on function public.create_cleaning_task(
+  text,
+  text,
+  date,
+  uuid,
+  uuid,
+  text,
+  text
+) to authenticated;
+
+-- =========================================================
+-- 8) ROTAR 2 TAREAS
+-- - intercambia las personas asignadas
+-- - por ahora cualquier miembro activo del piso puede hacerlo
+-- =========================================================
+
+create function public.rotate_cleaning_tasks(
+  p_house_public_code text,
+  p_task_a_id uuid,
+  p_task_b_id uuid,
+  p_note text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_task_a public.cleaning_tasks%rowtype;
+  v_task_b public.cleaning_tasks%rowtype;
+  v_old_a_assignee uuid;
+  v_old_b_assignee uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not (public.is_house_member(v_house_id) or public.is_house_creator(v_house_id)) then
+    raise exception 'Sin acceso a la casa';
+  end if;
+
+  if p_task_a_id is null or p_task_b_id is null then
+    raise exception 'Debes seleccionar dos tareas';
+  end if;
+
+  if p_task_a_id = p_task_b_id then
+    raise exception 'Debes seleccionar dos tareas distintas';
+  end if;
+
+  select *
+  into v_task_a
+  from public.cleaning_tasks
+  where id = p_task_a_id
+    and house_id = v_house_id
+    and status = 'pending'
+  limit 1;
+
+  select *
+  into v_task_b
+  from public.cleaning_tasks
+  where id = p_task_b_id
+    and house_id = v_house_id
+    and status = 'pending'
+  limit 1;
+
+  if v_task_a.id is null or v_task_b.id is null then
+    raise exception 'Una o ambas tareas no existen o no están pendientes';
+  end if;
+
+  v_old_a_assignee := v_task_a.assigned_to_profile_id;
+  v_old_b_assignee := v_task_b.assigned_to_profile_id;
+
+  update public.cleaning_tasks
+  set
+    assigned_to_profile_id = v_old_b_assignee,
+    rotated_at = now(),
+    updated_at = now()
+  where id = v_task_a.id;
+
+  update public.cleaning_tasks
+  set
+    assigned_to_profile_id = v_old_a_assignee,
+    rotated_at = now(),
+    updated_at = now()
+  where id = v_task_b.id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'cleaning_rotation',
+    null,
+    'swapped_assignees',
+    jsonb_build_object(
+      'task_a_id', v_task_a.id,
+      'task_b_id', v_task_b.id,
+      'task_a_old_assignee', v_old_a_assignee,
+      'task_b_old_assignee', v_old_b_assignee,
+      'task_a_new_assignee', v_old_b_assignee,
+      'task_b_new_assignee', v_old_a_assignee,
+      'note', p_note
+    )
+  );
+
+  return jsonb_build_object(
+    'task_a_id', v_task_a.id,
+    'task_b_id', v_task_b.id,
+    'task_a_assigned_to', v_old_b_assignee,
+    'task_b_assigned_to', v_old_a_assignee
+  );
+end;
+$$;
+
+grant execute on function public.rotate_cleaning_tasks(text, uuid, uuid, text) to authenticated;
+
+-- =========================================================
+-- 9) DASHBOARD DE LIMPIEZA
+-- - por zonas
+-- - solo tareas pendientes
+-- - sin lógica del panel derecho todavía
+-- =========================================================
+
+create function public.get_house_cleaning_dashboard(
+  p_house_public_code text,
+  p_limit_per_zone int default 50
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_result jsonb;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  v_result := (
+    with zones as (
+      select
+        cz.id,
+        cz.zone_key,
+        cz.name,
+        cz.sort_order
+      from public.cleaning_zones cz
+      where cz.is_active = true
+        and (cz.house_id is null or cz.house_id = v_house_id)
+    )
+    select jsonb_build_object(
+      'zones',
+      coalesce(jsonb_agg(
+        jsonb_build_object(
+          'zone_id', z.id,
+          'zone_key', z.zone_key,
+          'name', z.name,
+          'items', coalesce((
+            select jsonb_agg(
+              jsonb_build_object(
+                'task_id', ct.id,
+                'title', ct.title,
+                'due_date', ct.due_date,
+                'assigned_to_profile_id', ct.assigned_to_profile_id,
+                'assigned_to_name', public.profile_display_name(ct.assigned_to_profile_id),
+                'notes', ct.description,
+                'status', ct.status
+              )
+              order by ct.due_date asc, ct.created_at desc
+            )
+            from (
+              select *
+              from public.cleaning_tasks ct2
+              where ct2.house_id = v_house_id
+                and ct2.zone_id = z.id
+                and ct2.status = 'pending'
+              order by ct2.due_date asc, ct2.created_at desc
+              limit greatest(p_limit_per_zone, 1)
+            ) ct
+          ), '[]'::jsonb)
+        )
+        order by z.sort_order, z.name
+      ), '[]'::jsonb),
+      'can_add_task', true,
+      'can_rotate', true
+    )
+    from zones z
+  );
+
+  return v_result;
+end;
+$$;
+
+grant execute on function public.get_house_cleaning_dashboard(text, int) to authenticated;
+
+-- =========================================================
+-- 10) HISTORIAL DE TAREAS DE LIMPIEZA
+-- - sirve para “Ver todo”
+-- - por zona o general
+-- =========================================================
+
+create function public.get_house_cleaning_task_history(
+  p_house_public_code text,
+  p_zone_id uuid default null,
+  p_limit int default 100,
+  p_offset int default 0
+)
+returns table (
+  task_id uuid,
+  zone_id uuid,
+  zone_name text,
+  title text,
+  assigned_to_profile_id uuid,
+  assigned_to_name text,
+  due_date date,
+  status text,
+  notes text,
+  rotated_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    ct.id as task_id,
+    cz.id as zone_id,
+    cz.name as zone_name,
+    ct.title,
+    ct.assigned_to_profile_id,
+    public.profile_display_name(ct.assigned_to_profile_id) as assigned_to_name,
+    ct.due_date,
+    ct.status,
+    ct.description as notes,
+    ct.rotated_at,
+    ct.completed_at,
+    ct.created_at
+  from public.cleaning_tasks ct
+  join public.cleaning_zones cz
+    on cz.id = ct.zone_id
+  where ct.house_id = v_house_id
+    and (p_zone_id is null or ct.zone_id = p_zone_id)
+  order by ct.due_date asc, ct.created_at desc
+  limit greatest(p_limit, 1)
+  offset greatest(p_offset, 0);
+end;
+$$;
+
+grant execute on function public.get_house_cleaning_task_history(text, uuid, int, int) to authenticated;
+
+-- =========================================================
+-- 11) DATOS DE PRUEBA OPCIONALES
+-- =========================================================
+
+-- select public.get_add_cleaning_task_form_options('TU_PUBLIC_CODE');
+
+-- select public.create_cleaning_task(
+--   'TU_PUBLIC_CODE',
+--   'Barrer la cocina',
+--   current_date,
+--   'eb07d3f6-902f-4f4a-a842-8a9c7e28b947'::uuid,
+--   (select id from public.cleaning_zones where house_id is null and zone_key = 'kitchen' limit 1),
+--   null,
+--   'Pasar también la fregona'
+-- );
+
+-- select public.create_cleaning_task(
+--   'TU_PUBLIC_CODE',
+--   'Limpiar trastero',
+--   current_date + 1,
+--   '48d7f9ee-08c9-42c2-aa8b-5b0cb935dc1c'::uuid,
+--   null,
+--   'Trastero',
+--   'Zona extra'
+-- );
+
+-- select public.rotate_cleaning_tasks(
+--   'TU_PUBLIC_CODE',
+--   'UUID_TASK_A',
+--   'UUID_TASK_B',
+--   'Rotación manual'
+-- );
+
+-- select public.get_house_cleaning_dashboard('TU_PUBLIC_CODE', 50);
+
+-- select * from public.get_house_cleaning_task_history('TU_PUBLIC_CODE', null, 100, 0);
+
+create or replace function public.complete_cleaning_task(
+  p_house_public_code text,
+  p_task_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_task public.cleaning_tasks%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not (public.is_house_member(v_house_id) or public.is_house_creator(v_house_id)) then
+    raise exception 'Sin acceso a la casa';
+  end if;
+
+  if p_task_id is null then
+    raise exception 'Debes seleccionar una tarea';
+  end if;
+
+  select *
+  into v_task
+  from public.cleaning_tasks
+  where id = p_task_id
+    and house_id = v_house_id
+  limit 1;
+
+  if v_task.id is null then
+    raise exception 'La tarea no existe o no pertenece a este piso';
+  end if;
+
+  if v_task.status <> 'pending' then
+    raise exception 'La tarea no está pendiente';
+  end if;
+
+  update public.cleaning_tasks
+  set
+    status = 'done',
+    completed_by_profile_id = auth.uid(),
+    completed_at = now(),
+    updated_at = now()
+  where id = v_task.id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'cleaning_task',
+    v_task.id,
+    'completed',
+    jsonb_build_object(
+      'title', v_task.title,
+      'due_date', v_task.due_date,
+      'assigned_to_profile_id', v_task.assigned_to_profile_id,
+      'zone_id', v_task.zone_id,
+      'previous_status', v_task.status,
+      'new_status', 'done'
+    )
+  );
+
+  return jsonb_build_object(
+    'task_id', v_task.id,
+    'status', 'done',
+    'completed_by_profile_id', auth.uid(),
+    'completed_at', now()
+  );
+end;
+$$;
+
+grant execute on function public.complete_cleaning_task(text, uuid) to authenticated;

@@ -4,9 +4,21 @@ import type {
   AddExpenseFormOptions,
   AddExpenseCatalogItem,
   AddExpenseMember,
+  AddInvoiceCategory,
+  AddInvoiceFormOptions,
+  AddInvoiceMember,
+  AddCleaningMember,
+  AddCleaningTaskFormOptions,
+  AddCleaningZone,
+  CleaningDashboardData,
+  CleaningTask,
+  CleaningZoneSection,
   CurrentUserExpenseState,
   ExpenseTicket,
   ExpensesDashboardData,
+  Invoice,
+  InvoiceCategorySection,
+  InvoicesDashboardData,
   PendingPaymentConfirmation,
   Settlement,
   SharedExpense,
@@ -101,8 +113,338 @@ function mapSharedExpense(expense: Record<string, unknown>): SharedExpense {
   };
 }
 
+function readInvoiceCategoryName(invoice: Record<string, unknown>) {
+  return (
+    toStringValue(invoice.category_name) ||
+    toStringValue(invoice.invoice_category) ||
+    toStringValue(invoice.invoice_category_name) ||
+    toStringValue(invoice.category) ||
+    toStringValue(invoice.custom_category_name) ||
+    "Sin categoria"
+  );
+}
+
+type InvoiceCategoryOverride = {
+  category_id?: string | null;
+  category_name?: string | null;
+  category_slug?: string | null;
+};
+
+function mapInvoice(
+  invoice: Record<string, unknown>,
+  categoryOverride: InvoiceCategoryOverride = {}
+): Invoice {
+  const categoryName =
+    categoryOverride.category_name?.trim() || readInvoiceCategoryName(invoice);
+
+  return {
+    expense_id:
+      toStringValue(invoice.expense_id) ||
+      toStringValue(invoice.shared_expense_id) ||
+      toStringValue(invoice.invoice_id) ||
+      toStringValue(invoice.id),
+    title:
+      toStringValue(invoice.title) ||
+      toStringValue(invoice.display_title) ||
+      "Factura",
+    invoice_date:
+      toStringValue(invoice.invoice_date) ||
+      toStringValue(invoice.expense_date) ||
+      toStringValue(invoice.created_at) ||
+      toStringValue(invoice.date),
+    total_amount: toNumericLikeValue(
+      invoice.total_amount ?? invoice.amount ?? invoice.total
+    ),
+    currency: toStringValue(invoice.currency, "EUR"),
+    category_id:
+      categoryOverride.category_id ??
+      toNullableStringValue(invoice.category_id) ??
+      toNullableStringValue(invoice.invoice_category_id) ??
+      toNullableStringValue(invoice.invoice_category),
+    category_name: categoryName,
+    category_slug: slugifyInvoiceCategory(
+      categoryOverride.category_slug ||
+        toStringValue(invoice.category_slug) ||
+        toStringValue(invoice.invoice_category_slug) ||
+        toStringValue(invoice.category_key) ||
+        categoryName
+    ),
+    invoice_file_path:
+      toNullableStringValue(invoice.invoice_file_path) ??
+      toNullableStringValue(invoice.file_path),
+    settlement_status:
+      toNullableStringValue(invoice.settlement_status) ??
+      toNullableStringValue(invoice.invoice_status) ??
+      toNullableStringValue(invoice.status),
+    can_mark_paid:
+      toBooleanValue(invoice.can_mark_paid) ||
+      toBooleanValue(invoice.can_admin_mark_paid) ||
+      toBooleanValue(invoice.can_mark_invoice_paid) ||
+      toBooleanValue(invoice.user_can_mark_paid) ||
+      toBooleanValue(invoice.user_can_mark_invoice_paid),
+  };
+}
+
+function mapInvoiceCategory(category: Record<string, unknown>): AddInvoiceCategory {
+  const name =
+    toStringValue(category.name) ||
+    toStringValue(category.category_name) ||
+    toStringValue(category.invoice_category_name) ||
+    toStringValue(category.title);
+
+  return {
+    category_id:
+      toStringValue(category.category_id) ||
+      toStringValue(category.invoice_category_id) ||
+      toStringValue(category.id),
+    name,
+    slug: slugifyInvoiceCategory(
+      toStringValue(category.slug) || toStringValue(category.category_slug) || name
+    ),
+  };
+}
+
+function mapInvoiceMember(member: Record<string, unknown>): AddInvoiceMember {
+  return {
+    profile_id:
+      toStringValue(member.profile_id) ||
+      toStringValue(member.id) ||
+      toStringValue(member.profileId),
+    display_name:
+      toStringValue(member.display_name) ||
+      toStringValue(member.full_name) ||
+      toStringValue(member.name),
+    role: toStringValue(member.role, "member"),
+  };
+}
+
+function readCleaningZoneName(value: Record<string, unknown>) {
+  return (
+    toStringValue(value.zone_name) ||
+    toStringValue(value.cleaning_zone_name) ||
+    toStringValue(value.name) ||
+    toStringValue(value.title) ||
+    "Sin zona"
+  );
+}
+
+function mapCleaningZone(zone: Record<string, unknown>): AddCleaningZone {
+  return {
+    zone_id:
+      toStringValue(zone.zone_id) ||
+      toStringValue(zone.cleaning_zone_id) ||
+      toStringValue(zone.id),
+    name: readCleaningZoneName(zone),
+  };
+}
+
+function mapCleaningMember(member: Record<string, unknown>): AddCleaningMember {
+  return {
+    profile_id:
+      toStringValue(member.profile_id) ||
+      toStringValue(member.id) ||
+      toStringValue(member.profileId),
+    display_name:
+      toStringValue(member.display_name) ||
+      toStringValue(member.full_name) ||
+      toStringValue(member.name),
+    role: toStringValue(member.role, "member"),
+  };
+}
+
+function mapCleaningTask(
+  task: Record<string, unknown>,
+  zoneOverride: { zone_id?: string | null; zone_name?: string | null } = {}
+): CleaningTask {
+  const zoneName = zoneOverride.zone_name?.trim() || readCleaningZoneName(task);
+
+  return {
+    task_id:
+      toStringValue(task.task_id) ||
+      toStringValue(task.cleaning_task_id) ||
+      toStringValue(task.id),
+    title:
+      toStringValue(task.title) ||
+      toStringValue(task.task_title) ||
+      toStringValue(task.name) ||
+      "Tarea",
+    due_date:
+      toStringValue(task.due_date) ||
+      toStringValue(task.task_due_date) ||
+      toStringValue(task.date),
+    assigned_to_profile_id:
+      toNullableStringValue(task.assigned_to_profile_id) ??
+      toNullableStringValue(task.assigned_profile_id) ??
+      toNullableStringValue(task.profile_id),
+    assigned_to_name:
+      toStringValue(task.assigned_to_name) ||
+      toStringValue(task.assigned_name) ||
+      toStringValue(task.display_name) ||
+      toStringValue(task.full_name),
+    zone_id:
+      zoneOverride.zone_id ??
+      toNullableStringValue(task.zone_id) ??
+      toNullableStringValue(task.cleaning_zone_id),
+    zone_name: zoneName,
+    notes:
+      toNullableStringValue(task.notes) ??
+      toNullableStringValue(task.note) ??
+      toNullableStringValue(task.description),
+    status: toStringValue(task.status, "pending"),
+    completed_at:
+      toNullableStringValue(task.completed_at) ??
+      toNullableStringValue(task.completedAt),
+    completed_by_profile_id:
+      toNullableStringValue(task.completed_by_profile_id) ??
+      toNullableStringValue(task.completed_by),
+  };
+}
+
+function mapCleaningSection(section: Record<string, unknown>): CleaningZoneSection {
+  const zoneId =
+    toNullableStringValue(section.zone_id) ??
+    toNullableStringValue(section.cleaning_zone_id) ??
+    toNullableStringValue(section.id);
+  const zoneName = readCleaningZoneName(section);
+  const tasks = asArray<Record<string, unknown>>(
+    section.tasks ?? section.cleaning_tasks ?? section.items ?? section.rows
+  ).map((task) =>
+    mapCleaningTask(task, {
+      zone_id: zoneId,
+      zone_name: zoneName,
+    })
+  );
+
+  return {
+    zone_id: zoneId,
+    zone_name: zoneName,
+    tasks,
+  };
+}
+
+function groupCleaningTasksByZone(tasks: CleaningTask[]) {
+  const sectionsByZone = new Map<string, CleaningZoneSection>();
+
+  for (const task of tasks) {
+    const key = task.zone_id ?? task.zone_name;
+    const currentSection = sectionsByZone.get(key);
+
+    if (currentSection) {
+      currentSection.tasks.push(task);
+      continue;
+    }
+
+    sectionsByZone.set(key, {
+      zone_id: task.zone_id,
+      zone_name: task.zone_name,
+      tasks: [task],
+    });
+  }
+
+  return [...sectionsByZone.values()];
+}
+
+function orderInvoiceSections(sections: InvoiceCategorySection[]) {
+  const preferredOrder = ["alquiler", "suscripciones", "wifi", "agua", "luz"];
+  return [...sections].sort((first, second) => {
+    const firstIndex = preferredOrder.indexOf(first.category_slug);
+    const secondIndex = preferredOrder.indexOf(second.category_slug);
+
+    if (firstIndex !== -1 || secondIndex !== -1) {
+      return (firstIndex === -1 ? 999 : firstIndex) - (secondIndex === -1 ? 999 : secondIndex);
+    }
+
+    return first.category_name.localeCompare(second.category_name, "es");
+  });
+}
+
+function isOpenInvoice(invoice: Invoice) {
+  const normalizedStatus = (invoice.settlement_status ?? "").trim().toLowerCase();
+
+  if (!normalizedStatus) {
+    return true;
+  }
+
+  return ![
+    "paid",
+    "pagada",
+    "completed",
+    "complete",
+    "settled",
+    "liquidada",
+    "liquidado",
+    "closed",
+  ].includes(normalizedStatus);
+}
+
+function groupInvoicesByCategory(invoices: Invoice[]) {
+  const sectionsByCategory = new Map<string, InvoiceCategorySection>();
+
+  for (const invoice of invoices) {
+    const key = invoice.category_id ?? invoice.category_slug;
+    const currentSection = sectionsByCategory.get(key);
+
+    if (currentSection) {
+      currentSection.invoices.push(invoice);
+      continue;
+    }
+
+    sectionsByCategory.set(key, {
+      category_id: invoice.category_id,
+      category_name: invoice.category_name,
+      category_slug: invoice.category_slug,
+      invoices: [invoice],
+    });
+  }
+
+  return orderInvoiceSections([...sectionsByCategory.values()]);
+}
+
+function readInvoiceSection(
+  section: Record<string, unknown>,
+  options: { onlyOpen?: boolean } = {}
+) {
+  const categoryName =
+    toStringValue(section.category_name) ||
+    toStringValue(section.invoice_category_name) ||
+    toStringValue(section.name) ||
+    toStringValue(section.title) ||
+    "Sin categoria";
+  const categoryId =
+    toNullableStringValue(section.category_id) ??
+    toNullableStringValue(section.invoice_category_id) ??
+    toNullableStringValue(section.id);
+  const categorySlug = slugifyInvoiceCategory(
+    toStringValue(section.category_slug) ||
+      toStringValue(section.slug) ||
+      toStringValue(section.category_key) ||
+      categoryName
+  );
+  const rawInvoices =
+    section.invoices ??
+    section.active_invoices ??
+    section.items ??
+    section.rows ??
+    [];
+
+  const invoices = asArray<Record<string, unknown>>(rawInvoices).map((invoice) =>
+    mapInvoice(invoice, {
+      category_id: categoryId,
+      category_name: categoryName,
+      category_slug: categorySlug,
+    })
+  );
+
+  return {
+    category_id: categoryId,
+    category_name: categoryName,
+    category_slug: categorySlug,
+    invoices: options.onlyOpen ? invoices.filter(isOpenInvoice) : invoices,
+  } satisfies InvoiceCategorySection;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function toStringValue(value: unknown, fallback = "") {
@@ -123,6 +465,39 @@ function toNullableStringValue(value: unknown) {
   }
 
   return toStringValue(value);
+}
+
+function toBooleanValue(value: unknown, fallback = false) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalizedValue = value.trim().toLowerCase();
+    if (["true", "t", "yes", "1", "si", "sí"].includes(normalizedValue)) {
+      return true;
+    }
+    if (["false", "f", "no", "0"].includes(normalizedValue)) {
+      return false;
+    }
+  }
+
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+
+  return fallback;
+}
+
+function slugifyInvoiceCategory(value: string) {
+  const normalizedValue = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalizedValue || "sin-categoria";
 }
 
 function asArray<T>(value: unknown): T[] {
@@ -502,6 +877,482 @@ export async function loadOpenHouseSharedExpensesWithClient(
   }
 
   return asArray<Record<string, unknown>>(data).map(mapSharedExpense);
+}
+
+export async function loadHouseInvoicesDashboardWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string,
+  limit = 5
+) {
+  const attempts = [
+    { p_house_public_code: houseCode, p_limit_per_category: limit },
+    { p_house_public_code: houseCode, p_limit: limit },
+    { p_house_public_code: houseCode, p_invoice_limit: limit },
+    { house_public_code: houseCode, invoice_limit: limit },
+    { house_public_code: houseCode, limit },
+  ];
+  let data: unknown = null;
+  let lastError: unknown = null;
+
+  for (const args of attempts) {
+    const result = await supabase.rpc("get_house_invoices_dashboard", args);
+
+    if (!result.error) {
+      data = result.data;
+      lastError = null;
+      break;
+    }
+
+    lastError = result.error;
+  }
+
+  if (lastError) {
+    console.error("get_house_invoices_dashboard failed", lastError);
+    return { sections: [] } satisfies InvoicesDashboardData;
+  }
+
+  if (isRecord(data) && Array.isArray(data.sections)) {
+    return {
+      sections: orderInvoiceSections(
+        asArray<Record<string, unknown>>(data.sections).map((section) =>
+          readInvoiceSection(section, { onlyOpen: true })
+        )
+      ),
+    } satisfies InvoicesDashboardData;
+  }
+
+  if (isRecord(data) && Array.isArray(data.categories)) {
+    const categorySections = asArray<Record<string, unknown>>(data.categories)
+      .filter(
+        (category) =>
+          Array.isArray(category.invoices) ||
+          Array.isArray(category.active_invoices) ||
+          Array.isArray(category.items) ||
+          Array.isArray(category.rows)
+      )
+      .map((section) => readInvoiceSection(section, { onlyOpen: true }));
+
+    if (categorySections.length) {
+      return {
+        sections: orderInvoiceSections(categorySections),
+      } satisfies InvoicesDashboardData;
+    }
+  }
+
+  if (Array.isArray(data)) {
+    const rows = asArray<Record<string, unknown>>(data);
+    const sectionRows = rows.filter(
+      (row) =>
+        Array.isArray(row.invoices) ||
+        Array.isArray(row.active_invoices) ||
+        Array.isArray(row.items) ||
+        Array.isArray(row.rows)
+    );
+
+    if (sectionRows.length === rows.length && sectionRows.length > 0) {
+      return {
+        sections: orderInvoiceSections(
+          sectionRows.map((section) => readInvoiceSection(section, { onlyOpen: true }))
+        ),
+      } satisfies InvoicesDashboardData;
+    }
+
+    return {
+      sections: groupInvoicesByCategory(
+        rows.map((invoice) => mapInvoice(invoice)).filter(isOpenInvoice)
+      ),
+    } satisfies InvoicesDashboardData;
+  }
+
+  if (isRecord(data)) {
+    const invoices = asArray<Record<string, unknown>>(
+      data.invoices ?? data.active_invoices ?? data.items ?? data.rows
+    )
+      .map((invoice) => mapInvoice(invoice))
+      .filter(isOpenInvoice);
+    const sections = groupInvoicesByCategory(invoices);
+
+    for (const category of [
+      ...asArray<Record<string, unknown>>(
+        data.categories ?? data.invoice_categories
+      ),
+      ...asArray<Record<string, unknown>>(data.global_categories),
+      ...asArray<Record<string, unknown>>(data.custom_categories),
+    ].map(mapInvoiceCategory)) {
+      const exists = sections.some(
+        (section) =>
+          section.category_id === category.category_id ||
+          section.category_slug === category.slug
+      );
+
+      if (!exists) {
+        sections.push({
+          category_id: category.category_id,
+          category_name: category.name,
+          category_slug: category.slug,
+          invoices: [],
+        });
+      }
+    }
+
+    return {
+      sections: orderInvoiceSections(sections),
+    } satisfies InvoicesDashboardData;
+  }
+
+  return { sections: [] } satisfies InvoicesDashboardData;
+}
+
+export async function loadHouseInvoiceHistoryWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string,
+  limit = 100,
+  offset = 0
+) {
+  const attempts = [
+    { p_house_public_code: houseCode, p_limit: limit, p_offset: offset },
+    { house_public_code: houseCode, limit, offset },
+    { p_house_public_code: houseCode },
+    { house_public_code: houseCode },
+  ];
+  let data: unknown = null;
+  let lastError: unknown = null;
+
+  for (const args of attempts) {
+    const result = await supabase.rpc("get_house_invoice_history", args);
+
+    if (!result.error) {
+      data = result.data;
+      lastError = null;
+      break;
+    }
+
+    lastError = result.error;
+  }
+
+  if (lastError) {
+    console.error("get_house_invoice_history failed", lastError);
+    return [];
+  }
+
+  if (isRecord(data) && Array.isArray(data.sections)) {
+    return asArray<Record<string, unknown>>(data.sections).flatMap((section) =>
+      readInvoiceSection(section).invoices
+    );
+  }
+
+  if (isRecord(data) && Array.isArray(data.categories)) {
+    const categorySections = asArray<Record<string, unknown>>(data.categories)
+      .filter(
+        (category) =>
+          Array.isArray(category.invoices) ||
+          Array.isArray(category.active_invoices) ||
+          Array.isArray(category.items) ||
+          Array.isArray(category.rows)
+      )
+      .flatMap((section) => readInvoiceSection(section).invoices);
+
+    if (categorySections.length) {
+      return categorySections;
+    }
+  }
+
+  if (Array.isArray(data)) {
+    const rows = asArray<Record<string, unknown>>(data);
+    const sectionRows = rows.filter(
+      (row) =>
+        Array.isArray(row.invoices) ||
+        Array.isArray(row.active_invoices) ||
+        Array.isArray(row.items) ||
+        Array.isArray(row.rows)
+    );
+
+    if (sectionRows.length === rows.length && sectionRows.length > 0) {
+      return sectionRows.flatMap((section) => readInvoiceSection(section).invoices);
+    }
+
+    return rows.map((invoice) => mapInvoice(invoice));
+  }
+
+  const invoices = isRecord(data)
+    ? asArray<Record<string, unknown>>(
+        data.invoices ?? data.history ?? data.items ?? data.rows
+      )
+    : [];
+
+  return invoices.map((invoice) => mapInvoice(invoice));
+}
+
+export async function loadHouseCleaningDashboardWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string,
+  limit = 50
+) {
+  const attempts = [
+    { p_house_public_code: houseCode, p_limit_per_zone: limit },
+    { house_public_code: houseCode, limit },
+  ];
+  let data: unknown = null;
+  let lastError: unknown = null;
+
+  for (const args of attempts) {
+    const result = await supabase.rpc("get_house_cleaning_dashboard", args);
+
+    if (!result.error) {
+      data = result.data;
+      lastError = null;
+      break;
+    }
+
+    lastError = result.error;
+  }
+
+  if (lastError) {
+    console.error("get_house_cleaning_dashboard failed", lastError);
+    return { zones: [] } satisfies CleaningDashboardData;
+  }
+
+  if (isRecord(data)) {
+    const rawSections = asArray<Record<string, unknown>>(
+      data.zones ?? data.sections ?? data.cleaning_zones ?? data.rooms
+    );
+
+    if (rawSections.length) {
+      return {
+        zones: rawSections.map(mapCleaningSection),
+      } satisfies CleaningDashboardData;
+    }
+
+    const tasks = asArray<Record<string, unknown>>(
+      data.tasks ?? data.cleaning_tasks ?? data.items ?? data.rows
+    ).map((task) => mapCleaningTask(task));
+
+    return {
+      zones: groupCleaningTasksByZone(tasks),
+    } satisfies CleaningDashboardData;
+  }
+
+  if (Array.isArray(data)) {
+    const rows = asArray<Record<string, unknown>>(data);
+    const sectionRows = rows.filter(
+      (row) =>
+        Array.isArray(row.tasks) ||
+        Array.isArray(row.cleaning_tasks) ||
+        Array.isArray(row.items) ||
+        Array.isArray(row.rows)
+    );
+
+    if (sectionRows.length === rows.length && sectionRows.length > 0) {
+      return {
+        zones: sectionRows.map(mapCleaningSection),
+      } satisfies CleaningDashboardData;
+    }
+
+    return {
+      zones: groupCleaningTasksByZone(rows.map((task) => mapCleaningTask(task))),
+    } satisfies CleaningDashboardData;
+  }
+
+  return { zones: [] } satisfies CleaningDashboardData;
+}
+
+export async function loadAddCleaningTaskFormOptionsWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string
+) {
+  const attempts = [
+    { p_house_public_code: houseCode },
+    { house_public_code: houseCode },
+  ];
+  let data: unknown = null;
+  let lastError: unknown = null;
+
+  for (const args of attempts) {
+    const result = await supabase.rpc("get_add_cleaning_task_form_options", args);
+
+    if (!result.error) {
+      data = result.data;
+      lastError = null;
+      break;
+    }
+
+    lastError = result.error;
+  }
+
+  if (lastError) {
+    console.error("get_add_cleaning_task_form_options failed", lastError);
+  }
+
+  if (lastError || !isRecord(data)) {
+    return {
+      zones: [],
+      members: [],
+    } satisfies AddCleaningTaskFormOptions;
+  }
+
+  return {
+    zones: asArray<Record<string, unknown>>(
+      data.zones ?? data.cleaning_zones ?? data.rooms
+    ).map(mapCleaningZone),
+    members: asArray<Record<string, unknown>>(
+      data.members ?? data.house_members
+    ).map(mapCleaningMember),
+  } satisfies AddCleaningTaskFormOptions;
+}
+
+export async function loadHouseCleaningTaskHistoryWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string,
+  limit = 100,
+  offset = 0,
+  zoneId: string | null = null,
+  zoneName: string | null = null
+) {
+  const zoneScopedAttempts = zoneId
+    ? [
+        {
+          args: {
+            p_house_public_code: houseCode,
+            p_zone_id: zoneId,
+            p_limit: limit,
+            p_offset: offset,
+          },
+          scopedByZone: true,
+        },
+        {
+          args: {
+            p_house_public_code: houseCode,
+            p_cleaning_zone_id: zoneId,
+            p_limit: limit,
+            p_offset: offset,
+          },
+          scopedByZone: true,
+        },
+      ]
+    : [];
+  const attempts = [
+    ...zoneScopedAttempts,
+    {
+      args: {
+        p_house_public_code: houseCode,
+        p_zone_id: null,
+        p_limit: limit,
+        p_offset: offset,
+      },
+      scopedByZone: false,
+    },
+    {
+      args: { p_house_public_code: houseCode, p_limit: limit, p_offset: offset },
+      scopedByZone: false,
+    },
+    { args: { house_public_code: houseCode, limit, offset }, scopedByZone: false },
+  ];
+  let data: unknown = null;
+  let lastError: unknown = null;
+  let scopedByZone = false;
+
+  for (const attempt of attempts) {
+    const result = await supabase.rpc(
+      "get_house_cleaning_task_history",
+      attempt.args
+    );
+
+    if (!result.error) {
+      data = result.data;
+      lastError = null;
+      scopedByZone = attempt.scopedByZone;
+      break;
+    }
+
+    lastError = result.error;
+  }
+
+  if (lastError) {
+    console.error("get_house_cleaning_task_history failed", lastError);
+    throw lastError;
+  }
+
+  const tasks = isRecord(data)
+    ? asArray<Record<string, unknown>>(
+        data.tasks ??
+          data.cleaning_tasks ??
+          data.history ??
+          data.items ??
+          data.rows ??
+          data.data
+      ).map((task) => mapCleaningTask(task))
+    : asArray<Record<string, unknown>>(data).map((task) => mapCleaningTask(task));
+
+  if (zoneId && scopedByZone && tasks.length === 0 && zoneName) {
+    return loadHouseCleaningTaskHistoryWithClient(
+      supabase,
+      houseCode,
+      limit,
+      offset,
+      null,
+      zoneName
+    );
+  }
+
+  if (zoneId && !scopedByZone) {
+    return tasks.filter((task) => task.zone_id === zoneId);
+  }
+
+  if (zoneName && !scopedByZone) {
+    return tasks.filter(
+      (task) => task.zone_name.toLowerCase() === zoneName.toLowerCase()
+    );
+  }
+
+  return tasks;
+}
+
+export async function loadAddInvoiceFormOptionsWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  houseCode: string
+) {
+  const attempts = [
+    { p_house_public_code: houseCode },
+    { house_public_code: houseCode },
+  ];
+  let data: unknown = null;
+  let lastError: unknown = null;
+
+  for (const args of attempts) {
+    const result = await supabase.rpc("get_add_invoice_form_options", args);
+
+    if (!result.error) {
+      data = result.data;
+      lastError = null;
+      break;
+    }
+
+    lastError = result.error;
+  }
+
+  if (lastError) {
+    console.error("get_add_invoice_form_options failed", lastError);
+  }
+
+  if (lastError || !isRecord(data)) {
+    return {
+      categories: [],
+      members: [],
+    } satisfies AddInvoiceFormOptions;
+  }
+
+  return {
+    categories: [
+      ...asArray<Record<string, unknown>>(
+        data.categories ?? data.invoice_categories
+      ),
+      ...asArray<Record<string, unknown>>(data.global_categories),
+      ...asArray<Record<string, unknown>>(data.custom_categories),
+    ].map(mapInvoiceCategory),
+    members: asArray<Record<string, unknown>>(
+      data.members ?? data.house_members
+    ).map(mapInvoiceMember),
+  } satisfies AddInvoiceFormOptions;
 }
 
 export async function loadHousePendingPaymentConfirmationsWithClient(
