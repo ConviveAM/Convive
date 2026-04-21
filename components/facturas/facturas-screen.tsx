@@ -13,6 +13,12 @@ import {
 import type { InvoiceCategorySection } from "../../lib/dashboard-types";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import styles from "./facturas-screen.module.css";
 
 type FacturasScreenProps = {
@@ -87,19 +93,26 @@ export function FacturasScreen({
             <h1 className={styles.title}>Facturas</h1>
             <p className={styles.subtitle}>Gestiona las facturas del piso de forma clara</p>
           </div>
-          <Link
-            href={`${basePath}/facturas/anadir-factura`}
-            className={styles.headerPlusLink}
-            aria-label="Anadir factura"
-          >
-            <Image
-              src="/iconos/A%C3%B1adir.svg"
-              alt="Anadir"
-              width={24}
-              height={24}
-              className={styles.headerPlusIcon}
-            />
-          </Link>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href={`${basePath}/facturas/anadir-factura`}
+                  className={styles.headerPlusLink}
+                  aria-label="Anadir factura"
+                >
+                  <Image
+                    src="/iconos/A%C3%B1adir.svg"
+                    alt="Anadir"
+                    width={24}
+                    height={24}
+                    className={styles.headerPlusIcon}
+                  />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="top">Añadir factura</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </header>
 
         <div className={styles.content}>

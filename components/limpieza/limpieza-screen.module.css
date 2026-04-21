@@ -42,6 +42,22 @@
   height: 44px;
 }
 
+.headerPlusIcon {
+  width: 34px;
+  height: 34px;
+}
+
+.headerPlusLink {
+  all: unset;
+  width: 40px;
+  height: 40px;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 .headerCenter {
   text-align: center;
 }
@@ -67,24 +83,31 @@
 .content {
   padding: 1rem;
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 1fr;
   gap: 0.95rem;
   align-items: start;
+}
+
+.contentSingle {
+  display: block;
 }
 
 .leftCol {
   background: #8b1a2f;
   border-radius: 8px;
   padding: 0.55rem;
-  min-height: 580px;
+  min-height: 420px;
   max-height: 580px;
+  width: 100%;
+  max-width: 560px;
+  justify-self: center;
   overflow-y: hidden;
   overflow-x: hidden;
 }
 
 .topActions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.45rem;
   margin-bottom: 1rem;
 }
@@ -95,6 +118,30 @@
   color: #f0eae4;
   font-size: 13px;
   padding: 0.4rem 0.45rem;
+}
+
+.topButtonContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.topViewAllLink {
+  border: 0;
+  background: transparent;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+  margin-left: auto;
+  margin-right: 1px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
 }
 
 .groupsScroll {
@@ -169,11 +216,26 @@
   background: transparent;
   color: #f0eae4;
   font-family: "Poppins", sans-serif;
-  font-size: 11px;
-  text-decoration: underline;
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
   cursor: pointer;
-  padding: 0.2rem 0;
+  padding: 0;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+.viewAllContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.viewAllArrow {
+  width: 20px;
+  height: 20px;
+  transform: rotate(180deg);
 }
 
 .groupRows {
@@ -187,9 +249,10 @@
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
-  gap: 0.45rem;
-  padding: 0.35rem 0.4rem;
+  gap: 1rem;
+  padding: 0.48rem 0.5rem;
   align-items: start;
+  min-height: 68px;
 }
 
 .taskDetailsButton {
@@ -212,29 +275,32 @@
   min-width: 0;
 }
 
+.taskLeft :global(img) {
+  align-self: center;
+}
+
 .taskLeft p {
   margin: 0;
   color: #1f1a17;
   font-family: "Poppins", sans-serif;
-  font-size: 13px;
-  line-height: 1.1;
+  font-size: 15px;
+  line-height: 1.2;
 }
 
 .taskLeft small {
   color: #5a5652;
-  font-size: 10px;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
   display: block;
   margin-top: 0.05rem;
-  line-height: 1.05;
+  line-height: 1.2;
 }
 
-.taskOwner {
-  color: #1f1a17;
-  font-size: 11px;
+.taskAssignee {
+  color: #6f6a66;
   font-family: "Poppins", sans-serif;
-  text-align: right;
-  max-width: 72px;
-  overflow-wrap: anywhere;
+  font-size: 12px;
+  margin-top: 0.12rem;
 }
 
 .taskCheckbox {
@@ -248,7 +314,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-top: 0.15rem;
+  margin-top: 0;
+  align-self: center;
 }
 
 .taskCheckbox[data-state="checked"] {
@@ -263,21 +330,82 @@
 }
 
 .floorWrap {
-  min-height: 100%;
+  min-height: auto;
+  height: auto;
   display: grid;
 }
 
 .floorImageWrap {
   position: relative;
   width: 100%;
-  min-height: 520px;
+  aspect-ratio: 898 / 601;
+  height: auto;
+  min-height: 360px;
   border-radius: 10px;
   overflow: hidden;
   border: 2px solid rgba(240, 234, 228, 0.85);
+  background: #f0eae4;
 }
 
-.floorImage {
-  object-fit: cover;
+.floorSvgObject {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.floorOverlayLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.zoneOverlay {
+  position: absolute;
+  padding: 0.28rem;
+  display: grid;
+  gap: 0.24rem;
+  align-content: start;
+  overflow: auto;
+  pointer-events: auto;
+  scrollbar-width: thin;
+}
+
+.floorTaskCard {
+  width: 100%;
+  border: 1.5px solid #8b1a2f;
+  border-radius: 6px;
+  background: #f0eae4;
+  padding: 0.24rem 0.28rem;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 0.35rem;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.floorTaskCard p {
+  margin: 0;
+  color: #1f1a17;
+  font-size: 11px;
+  line-height: 1.08;
+  font-family: "Poppins", sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.floorTaskCard small {
+  display: block;
+  margin-top: 0.08rem;
+  color: #5a5652;
+  font-size: 10px;
+  line-height: 1.08;
+  font-family: "Poppins", sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .overlayTask {
@@ -330,16 +458,65 @@
   overflow-y: auto;
   border: none;
   border-radius: 8px;
-  background: #f0ebe6;
+  background: #f0eae4;
   padding: 1rem;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+}
+
+.addTaskCard {
+  width: min(100%, 900px);
+  max-height: min(90svh, 820px);
+  padding: 1rem 1rem 1.05rem;
+}
+
+.addTaskInlineCard {
+  border-radius: 8px;
+  border: none;
+  background: #f0ebe6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  padding: 1rem 1rem 1.05rem;
+  max-width: 100%;
+}
+
+.historyInlineCard {
+  border-radius: 8px;
+  border: none;
+  background: #f0eae4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  padding: 1rem 1rem 1.05rem;
+  max-width: 100%;
 }
 
 .modalTop {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 1rem;
+}
+
+.modalHeading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.modalBackButton {
+  border: 0;
+  background: transparent;
+  color: #8b1a2f;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.modalBackButton :global(img) {
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
 }
 
 .modalTitle {
@@ -359,6 +536,132 @@
   font-size: 14px;
   cursor: pointer;
   padding: 0.35rem 0;
+}
+
+.addTaskCardTop {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.historyCardTop {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.addTaskInlineBack {
+  border: 0;
+  background: transparent;
+  color: #8b1a2f;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.addTaskInlineBack :global(img) {
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.historyInlineBack {
+  border: 0;
+  background: transparent;
+  color: #8b1a2f;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.historyInlineBack :global(img) {
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.addTaskCardTitle {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.historyCardTitle {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.addTaskBlocks {
+  margin-top: 0.4rem;
+  display: grid;
+  gap: 0;
+}
+
+.addTaskBlock {
+  margin-top: 1.45rem;
+}
+
+.addTaskCardTop + .addTaskBlocks .addTaskBlock:first-child {
+  margin-top: 0.4rem;
+}
+
+.addTaskBlockTitle {
+  margin: 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.addTaskTwoCols {
+  margin-top: 0.8rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.addTaskCard .fieldGroup {
+  margin-top: 0.8rem;
+}
+
+.addTaskCard .fieldLabel {
+  font-size: 13px;
+}
+
+.addTaskCard .fieldInput,
+.addTaskCard .fieldSelect,
+.addTaskCard .fieldTextarea {
+  background: transparent;
+  padding: 0.48rem 0.55rem;
+  font-size: 14px;
+}
+
+.addTaskCard .fieldTextarea {
+  margin-top: 0.5rem;
+  min-height: 90px;
+}
+
+.addTaskCard .dateTrigger {
+  margin-top: 0.5rem;
+  width: 142px;
+  height: 28px;
+  padding: 0 0.55rem;
+  font-size: 12px;
 }
 
 .formGrid {
@@ -396,6 +699,21 @@
 .fieldTextarea {
   resize: vertical;
   min-height: 96px;
+}
+
+.fieldSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath d='M3 5l4 4 4-4' fill='none' stroke='%238b1a2f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 0.55rem) center;
+  background-size: 14px 14px;
+  padding-right: 2rem;
+}
+
+.fieldSelect::-ms-expand {
+  display: none;
 }
 
 .dateTrigger {
@@ -452,6 +770,10 @@
   justify-content: center;
 }
 
+.addTaskSaveWrap {
+  margin-top: 1rem;
+}
+
 .saveButton {
   background: #be6f8b;
   color: #f0eae4;
@@ -469,7 +791,8 @@
 }
 
 .taskInfoList div {
-  background: #fff8f2;
+  background: #f0eae4;
+  border: 1.5px solid #8b1a2f;
   border-radius: 8px;
   padding: 0.65rem 0.75rem;
 }
@@ -478,7 +801,7 @@
   margin: 0;
   color: #8b1a2f;
   font-family: "Poppins", sans-serif;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -498,12 +821,25 @@
 }
 
 .historyRow {
-  background: #fff8f2;
+  background: #f0eae4;
+  border: 1.5px solid #8b1a2f;
   border-radius: 8px;
   padding: 0.55rem 0.65rem;
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 0.7rem;
+}
+
+.historyMain {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 0.72rem;
+  min-width: 0;
+}
+
+.historyMain :global(img) {
+  align-self: center;
 }
 
 .historyRow p {
@@ -545,8 +881,29 @@
     max-height: none;
   }
 
+  .floorWrap {
+    min-height: auto;
+    height: auto;
+  }
+
+  .floorImageWrap {
+    aspect-ratio: 898 / 601;
+    height: auto;
+    min-height: 320px;
+  }
+
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .addTaskCard {
+    width: min(100%, 680px);
+    padding: 1rem;
+  }
+
+  .addTaskTwoCols {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
   }
 }
 
@@ -557,6 +914,12 @@
 
   .backLink {
     transform: translateX(-0.7rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .headerPlusLink {
+    margin-right: 10px;
   }
 }
 

@@ -21,7 +21,7 @@ export function HerramientasEntraScreen({
     <main className={styles.page}>
       <section className={styles.panel}>
         <header className={styles.header}>
-          <Link href={`${basePath}/herramientas`} className={styles.backLink}>
+          <Link href={`${basePath}/menu`} className={styles.backLink}>
             <Image src="/iconos/flechaatras.svg" alt="Volver" width={20} height={20} className={styles.backIcon} />
           </Link>
           <div className={styles.headerCenter}>

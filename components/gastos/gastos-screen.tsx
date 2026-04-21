@@ -14,6 +14,12 @@ import {
   formatShortDate,
   resolveTicketFileUrl,
 } from "../../lib/dashboard-presenters";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import styles from "./gastos-screen.module.css";
 
 type GastosScreenProps = {
@@ -57,26 +63,32 @@ export function GastosScreen({
             <h1 className={styles.title}>Gastos</h1>
             <p className={styles.subtitle}>Compras, imprevistos y gastos compartidos</p>
           </div>
-          <span />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href={`${basePath}/gastos/anadir-ticket`}
+                  className={styles.headerPlusLink}
+                  aria-label="Anadir ticket"
+                >
+                  <Image
+                    src="/iconos/A%C3%B1adir.svg"
+                    alt="Anadir"
+                    width={24}
+                    height={24}
+                    className={styles.headerPlusIcon}
+                  />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="top">Añadir ticket</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </header>
 
         <div className={styles.content}>
           <Card className={`${styles.maroonSection} ${styles.ticketsSection}`}>
             <div className={`${styles.sectionTop} ${styles.simpleTop}`}>
               <div className={styles.sectionTitleWrap}>
-                <Link
-                  href={`${basePath}/gastos/anadir-ticket`}
-                  className={styles.plusLink}
-                  aria-label="Añadir ticket"
-                >
-                  <Image
-                    src="/iconos/Añadir.svg"
-                    alt=""
-                    width={16}
-                    height={16}
-                    className={styles.plusIcon}
-                  />
-                </Link>
                 <h2 className={styles.sectionTitle}>Tickets de compra</h2>
               </div>
               <Link href={`${basePath}/gastos/tickets`} className={styles.viewAll}>

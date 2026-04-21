@@ -320,7 +320,7 @@ export function GastosAddTicketScreen({
     <main className={styles.page}>
       <section className={styles.panel}>
         <header className={styles.header}>
-          <Link href={`${basePath}/gastos`} className={styles.backLink}>
+          <Link href={`${basePath}/menu`} className={styles.backLink}>
             <Image
               src="/iconos/flechaatras.svg"
               alt="Volver"
@@ -353,7 +353,7 @@ export function GastosAddTicketScreen({
                   height={34}
                 />
               </Link>
-              <h2 className={styles.cardTitle}>Añadir gasto</h2>
+              <h2 className={styles.cardTitle}>Añadir ticket</h2>
             </div>
 
             <section className={styles.block}>

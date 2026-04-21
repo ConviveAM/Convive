@@ -47,11 +47,13 @@
 }
 
 .headerPlusIcon {
-  width: 24px;
-  height: 24px;
+  width: 34px;
+  height: 34px;
 }
 
 .headerPlusLink {
+  width: 40px;
+  height: 40px;
   justify-self: end;
   display: inline-flex;
   align-items: center;
@@ -354,5 +356,11 @@
     align-items: center;
     justify-content: center;
     text-align: center;
+  }
+}
+
+@media (min-width: 1024px) {
+  .headerPlusLink {
+    margin-right: 10px;
   }
 }

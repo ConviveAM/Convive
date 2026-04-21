@@ -33,7 +33,7 @@ export function GastosPagoSimplificadoScreen({
     <main className={styles.page}>
       <section className={styles.panel}>
         <header className={styles.header}>
-          <Link href={`${basePath}/gastos/simplificar`} className={styles.backLink}>
+          <Link href={`${basePath}/menu`} className={styles.backLink}>
             <Image
               src="/iconos/flechaatras.svg"
               alt="Volver"
