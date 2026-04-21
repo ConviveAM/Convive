@@ -7,17 +7,36 @@ import { useState, useTransition } from "react";
 
 import { createPendingInvoiceExpenseAction } from "../../app/actions/invoice-actions";
 import type { AddInvoiceFormOptions } from "../../lib/dashboard-types";
+import type {
+  TicketScannerCategory,
+  TicketScannerData,
+} from "../../lib/ticket-scanner-types";
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
 import { Card } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { TicketUploader } from "../ui/ticket-uploader";
 import styles from "./facturas-add-screen.module.css";
 
 type FacturasAddScreenProps = {
   houseCode: string;
   dashboardPath: string;
   formOptions: AddInvoiceFormOptions;
+};
+
+const scannerCategoryLabels: Record<TicketScannerCategory, string> = {
+  luz: "Luz",
+  agua: "Agua",
+  wifi: "Wifi",
+  gas: "Gas",
+  alquiler: "Alquiler",
+  otro: "Otra factura",
+};
+
+const scannerCategoryFallbacks: Partial<Record<TicketScannerCategory, string[]>> = {
+  gas: ["gas", "suscripciones"],
+  otro: ["otro", "suscripciones"],
 };
 
 function formatDate(date?: Date) {
@@ -43,6 +62,65 @@ function normalizeManualCategory(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function normalizeCategoryKey(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+function parseScannerDate(value?: string | null): Date | undefined {
+  if (!value) return undefined;
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value.trim());
+  if (!match) return undefined;
+  const [, dd, mm, yyyy] = match;
+  const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date;
+}
+
+function getLastDayOfMonth(year: number, monthIndex: number) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function inferInvoiceDate(periodo?: string | null): Date | undefined {
+  if (!periodo) return undefined;
+
+  const normalized = periodo.replace(/\s+/g, " ").trim();
+
+  const dateMatches = normalized.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/g);
+  if (dateMatches?.length) {
+    const parsedDates = dateMatches
+      .map((rawDate) => parseScannerDate(rawDate))
+      .filter((value): value is Date => !!value)
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    if (parsedDates.length) {
+      return parsedDates[parsedDates.length - 1];
+    }
+  }
+
+  const monthlyChargeMatch =
+    /\b(?:dia|d[ií]a)\s*(\d{1,2})\s*de cada mes\b/i.exec(normalized);
+  if (!monthlyChargeMatch) {
+    return undefined;
+  }
+
+  const requestedDay = Number(monthlyChargeMatch[1]);
+  if (!Number.isFinite(requestedDay) || requestedDay <= 0) {
+    return undefined;
+  }
+
+  const now = new Date();
+  const maxDayInMonth = getLastDayOfMonth(now.getFullYear(), now.getMonth());
+  const safeDay = Math.min(requestedDay, maxDayInMonth);
+  const inferredDate = new Date(now.getFullYear(), now.getMonth(), safeDay);
+
+  return Number.isNaN(inferredDate.getTime()) ? undefined : inferredDate;
+}
+
 export function FacturasAddScreen({
   houseCode,
   dashboardPath,
@@ -62,6 +140,7 @@ export function FacturasAddScreen({
     formOptions.members.map((member) => member.profile_id)
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
   const basePath = dashboardPath;
   const hasMembers = formOptions.members.length > 0;
 
@@ -78,6 +157,28 @@ export function FacturasAddScreen({
     setManualCategoryName("");
   };
 
+  const selectScannedCategory = (category: TicketScannerCategory) => {
+    const categoryKeys = [
+      category,
+      ...(scannerCategoryFallbacks[category] ?? []),
+    ].map(normalizeCategoryKey);
+    const matchedCategory = formOptions.categories.find((option) => {
+      const optionKeys = [
+        normalizeCategoryKey(option.slug),
+        normalizeCategoryKey(option.name),
+      ];
+      return optionKeys.some((key) => categoryKeys.includes(key));
+    });
+
+    if (matchedCategory) {
+      selectCategory(matchedCategory.category_id);
+      return;
+    }
+
+    setSelectedCategoryId(null);
+    setManualCategoryName(scannerCategoryLabels[category]);
+  };
+
   const resetForm = () => {
     setDate(new Date());
     setTitle("");
@@ -89,14 +190,19 @@ export function FacturasAddScreen({
       formOptions.members.map((member) => member.profile_id)
     );
     setErrorMessage(null);
+    setScanMessage(null);
   };
 
   const handleSaveInvoice = () => {
-    const normalizedTitle = title.trim();
-    const invoiceDate = toIsoDate(date);
-    const parsedTotalAmount = Number(totalAmount.replace(",", "."));
+    const selectedCategory = formOptions.categories.find(
+      (category) => category.category_id === selectedCategoryId
+    );
     const normalizedManualCategory =
       normalizeManualCategory(manualCategoryName);
+    const normalizedTitle =
+      title.trim() || normalizedManualCategory || selectedCategory?.name || "";
+    const invoiceDate = toIsoDate(date);
+    const parsedTotalAmount = Number(totalAmount.replace(",", "."));
     const invoiceCategoryId = normalizedManualCategory
       ? null
       : selectedCategoryId;
@@ -162,6 +268,36 @@ export function FacturasAddScreen({
     });
   };
 
+  const handleScanComplete = (data: TicketScannerData) => {
+    if (data.tipo === "desconocido") {
+      setScanMessage("No se detecto ticket ni factura en el archivo.");
+      return;
+    }
+
+    const parsedDate = parseScannerDate(data.fecha) ?? inferInvoiceDate(data.periodo);
+    if (parsedDate) {
+      setDate(parsedDate);
+    }
+
+    if (data.categoria) {
+      selectScannedCategory(data.categoria);
+    }
+
+    if (typeof data.importe_total === "number" && Number.isFinite(data.importe_total)) {
+      setTotalAmount(data.importe_total.toFixed(2));
+    }
+
+    const inferredTitle =
+      data.comercio?.trim() ||
+      (data.categoria ? scannerCategoryLabels[data.categoria] : null);
+    if (inferredTitle) {
+      setTitle(inferredTitle);
+    }
+
+    setErrorMessage(null);
+    setScanMessage("Datos detectados y cargados en el formulario.");
+  };
+
   return (
     <main className={styles.page}>
       <section className={styles.panel}>
@@ -192,43 +328,17 @@ export function FacturasAddScreen({
               >
                 <Image src="/iconos/flechaatras.svg" alt="" width={32} height={32} />
               </Link>
-              <h2 className={styles.cardTitle}>Anadir factura</h2>
+              <h2 className={styles.cardTitle}>Añadir factura</h2>
             </div>
 
             <section className={styles.block}>
               <h3 className={styles.blockTitle}>1 - Adjunta la factura</h3>
-              <div className={styles.uploadBox}>
-                <Image
-                  src="/iconos/Escanearimagen.svg"
-                  alt="Subir imagen"
-                  width={48}
-                  height={48}
-                />
-              </div>
-              <div className={styles.fieldsGrid}>
-                <label className={styles.fieldGroup}>
-                  <span className={styles.fieldLabel}>Titulo</span>
-                  <input
-                    className={styles.fieldInput}
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder="Factura mensual"
-                  />
-                </label>
-                <label className={styles.fieldGroup}>
-                  <span className={styles.fieldLabel}>Importe total</span>
-                  <input
-                    className={styles.fieldInput}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={totalAmount}
-                    onChange={(event) => setTotalAmount(event.target.value)}
-                    placeholder="0,00"
-                  />
-                </label>
-              </div>
+              <TicketUploader
+                onScanComplete={handleScanComplete}
+                className={styles.uploadBox}
+                minHeight={190}
+              />
+              {scanMessage ? <p className={styles.scanMessage}>{scanMessage}</p> : null}
             </section>
 
             <section className={styles.block}>
@@ -252,15 +362,9 @@ export function FacturasAddScreen({
               ) : (
                 <p className={styles.emptyCopy}>No hay categorias configuradas.</p>
               )}
-              <label className={styles.manualCategory}>
-                <span className={styles.fieldLabel}>Categoria manual</span>
-                <input
-                  className={styles.fieldInput}
-                  value={manualCategoryName}
-                  onChange={(event) => setManualCategoryName(event.target.value)}
-                  placeholder="Otra factura"
-                />
-              </label>
+              {!formOptions.categories.length && manualCategoryName ? (
+                <p className={styles.scanMessage}>{manualCategoryName}</p>
+              ) : null}
             </section>
 
             <section className={styles.block}>
@@ -317,14 +421,20 @@ export function FacturasAddScreen({
             </section>
 
             <section className={styles.block}>
-              <h3 className={styles.blockTitle}>Notas</h3>
-              <textarea
-                className={styles.fieldTextarea}
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Anade un contexto util para el piso"
-                rows={3}
-              />
+              <h3 className={styles.blockTitle}>5 - Total de la factura o ticket</h3>
+              <div className={styles.totalFieldWrap}>
+                <input
+                  className={styles.totalInput}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={totalAmount}
+                  onChange={(event) => setTotalAmount(event.target.value)}
+                  placeholder="0,00"
+                />
+                <span className={styles.totalCurrency}>€</span>
+              </div>
             </section>
 
             {errorMessage ? (
