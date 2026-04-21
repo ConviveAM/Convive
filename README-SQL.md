@@ -5255,3 +5255,88 @@ grant execute on function public.get_house_cleaning_task_history(text, uuid, int
 -- select public.get_house_cleaning_dashboard('TU_PUBLIC_CODE', 50);
 
 -- select * from public.get_house_cleaning_task_history('TU_PUBLIC_CODE', null, 100, 0);
+
+create or replace function public.complete_cleaning_task(
+  p_house_public_code text,
+  p_task_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_task public.cleaning_tasks%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not (public.is_house_member(v_house_id) or public.is_house_creator(v_house_id)) then
+    raise exception 'Sin acceso a la casa';
+  end if;
+
+  if p_task_id is null then
+    raise exception 'Debes seleccionar una tarea';
+  end if;
+
+  select *
+  into v_task
+  from public.cleaning_tasks
+  where id = p_task_id
+    and house_id = v_house_id
+  limit 1;
+
+  if v_task.id is null then
+    raise exception 'La tarea no existe o no pertenece a este piso';
+  end if;
+
+  if v_task.status <> 'pending' then
+    raise exception 'La tarea no está pendiente';
+  end if;
+
+  update public.cleaning_tasks
+  set
+    status = 'done',
+    completed_by_profile_id = auth.uid(),
+    completed_at = now(),
+    updated_at = now()
+  where id = v_task.id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'cleaning_task',
+    v_task.id,
+    'completed',
+    jsonb_build_object(
+      'title', v_task.title,
+      'due_date', v_task.due_date,
+      'assigned_to_profile_id', v_task.assigned_to_profile_id,
+      'zone_id', v_task.zone_id,
+      'previous_status', v_task.status,
+      'new_status', 'done'
+    )
+  );
+
+  return jsonb_build_object(
+    'task_id', v_task.id,
+    'status', 'done',
+    'completed_by_profile_id', auth.uid(),
+    'completed_at', now()
+  );
+end;
+$$;
+
+grant execute on function public.complete_cleaning_task(text, uuid) to authenticated;

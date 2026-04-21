@@ -31,6 +31,12 @@ type RotateCleaningTasksInput = {
   note: string | null;
 };
 
+type CompleteCleaningTaskInput = {
+  houseCode: string;
+  dashboardPath: string;
+  taskId: string;
+};
+
 type LoadCleaningHistoryInput = {
   houseCode: string;
   zoneId: string | null;
@@ -115,6 +121,34 @@ export async function rotateCleaningTasksAction(
       data: {
         taskAId: input.taskAId,
         taskBId: input.taskBId,
+      },
+    };
+  } catch (error) {
+    return { success: false, error: toActionError(error) };
+  }
+}
+
+export async function completeCleaningTaskAction(
+  input: CompleteCleaningTaskInput
+): Promise<ActionResult<{ taskId: string }>> {
+  try {
+    const { supabase } = await getAuthenticatedProfileContext();
+
+    const { error } = await supabase.rpc("complete_cleaning_task", {
+      p_house_public_code: input.houseCode,
+      p_task_id: input.taskId,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidateCleaningPaths(input.dashboardPath);
+
+    return {
+      success: true,
+      data: {
+        taskId: input.taskId,
       },
     };
   } catch (error) {

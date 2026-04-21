@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import {
+  completeCleaningTaskAction,
   createCleaningTaskAction,
   loadCleaningTaskHistoryAction,
   rotateCleaningTasksAction,
@@ -56,6 +57,42 @@ function formatTaskDate(dateValue: string) {
   }).format(parsedDate);
 }
 
+function formatCompletedAt(dateValue: string | null) {
+  if (!dateValue) {
+    return null;
+  }
+
+  const parsedDate = new Date(dateValue);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  const formattedDate = new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(parsedDate);
+  const formattedTime = new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsedDate);
+
+  return `Hecha el ${formattedDate} a las ${formattedTime}`;
+}
+
+function formatStatus(status: string) {
+  if (status === "done") {
+    return "Hecha";
+  }
+
+  if (status === "archived") {
+    return "Archivada";
+  }
+
+  return "Pendiente";
+}
+
 function normalizeManualZone(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
@@ -86,6 +123,8 @@ export function LimpiezaScreen({
   const [isRotateOpen, setIsRotateOpen] = useState(false);
   const [historyTitle, setHistoryTitle] = useState<string | null>(null);
   const [historyTasks, setHistoryTasks] = useState<CleaningTask[]>([]);
+  const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<CleaningTask | null>(null);
   const [title, setTitle] = useState("");
   const [selectedZoneId, setSelectedZoneId] = useState(
     formOptions.zones[0]?.zone_id ?? ""
@@ -119,6 +158,11 @@ export function LimpiezaScreen({
 
       return [...current, taskId].slice(-2);
     });
+  };
+
+  const handleOpenTask = (task: CleaningTask) => {
+    setSelectedTask(task);
+    setErrorMessage(null);
   };
 
   const handleSaveTask = () => {
@@ -206,9 +250,39 @@ export function LimpiezaScreen({
     });
   };
 
+  const handleCompleteTask = () => {
+    if (!selectedTask?.task_id) {
+      return;
+    }
+
+    setErrorMessage(null);
+
+    startTransition(async () => {
+      const result = await completeCleaningTaskAction({
+        houseCode,
+        dashboardPath: basePath,
+        taskId: selectedTask.task_id,
+      });
+
+      if (result.success) {
+        setSelectedTask(null);
+        setSelectedTaskIds((current) =>
+          current.filter((taskId) => taskId !== result.data.taskId)
+        );
+        router.refresh();
+        return;
+      }
+
+      if ("error" in result) {
+        setErrorMessage(result.error);
+      }
+    });
+  };
+
   const handleOpenHistory = (zone: CleaningZoneSection | null) => {
     setHistoryTitle(zone ? zone.zone_name : "Historial");
     setHistoryTasks([]);
+    setHasLoadedHistory(false);
     setErrorMessage(null);
 
     startHistoryTransition(async () => {
@@ -220,12 +294,15 @@ export function LimpiezaScreen({
 
       if (result.success) {
         setHistoryTasks(result.data);
+        setHasLoadedHistory(true);
         return;
       }
 
       if ("error" in result) {
         setErrorMessage(result.error);
       }
+
+      setHasLoadedHistory(true);
     });
   };
 
@@ -288,29 +365,35 @@ export function LimpiezaScreen({
                     <div className={styles.groupRows}>
                       {zone.tasks.length ? (
                         zone.tasks.map((task) => (
-                          <label key={task.task_id} className={styles.taskRow}>
+                          <div key={task.task_id} className={styles.taskRow}>
                             <Checkbox
                               className={styles.taskCheckbox}
                               checked={selectedTaskIds.includes(task.task_id)}
                               onCheckedChange={() => toggleTaskSelection(task.task_id)}
                               disabled={!task.task_id}
                             />
-                            <div className={styles.taskLeft}>
-                              <Image
-                                src="/images/IconoperfilM.webp"
-                                alt=""
-                                width={22}
-                                height={22}
-                              />
-                              <div>
-                                <p>{task.title}</p>
-                                <small>{formatTaskDate(task.due_date)}</small>
+                            <button
+                              type="button"
+                              className={styles.taskDetailsButton}
+                              onClick={() => handleOpenTask(task)}
+                            >
+                              <div className={styles.taskLeft}>
+                                <Image
+                                  src="/images/IconoperfilM.webp"
+                                  alt=""
+                                  width={22}
+                                  height={22}
+                                />
+                                <div>
+                                  <p>{task.title}</p>
+                                  <small>{formatTaskDate(task.due_date)}</small>
+                                </div>
                               </div>
-                            </div>
-                            <span className={styles.taskOwner}>
-                              {task.assigned_to_name || "Sin asignar"}
-                            </span>
-                          </label>
+                              <span className={styles.taskOwner}>
+                                {task.assigned_to_name || "Sin asignar"}
+                              </span>
+                            </button>
+                          </div>
                         ))
                       ) : (
                         <p className={styles.emptyText}>No hay tareas en esta zona.</p>
@@ -338,6 +421,63 @@ export function LimpiezaScreen({
           </div>
         </div>
       </section>
+
+      {selectedTask ? (
+        <div className={styles.modalBackdrop}>
+          <Card className={styles.modalCard}>
+            <div className={styles.modalTop}>
+              <h2 className={styles.modalTitle}>{selectedTask.title}</h2>
+              <button
+                type="button"
+                className={styles.closeButton}
+                onClick={() => {
+                  setSelectedTask(null);
+                  setErrorMessage(null);
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <dl className={styles.taskInfoList}>
+              <div>
+                <dt>Notas</dt>
+                <dd>{selectedTask.notes || "Sin notas"}</dd>
+              </div>
+              <div>
+                <dt>Zona</dt>
+                <dd>{selectedTask.zone_name || "Sin zona"}</dd>
+              </div>
+              <div>
+                <dt>Fecha</dt>
+                <dd>{formatTaskDate(selectedTask.due_date)}</dd>
+              </div>
+              <div>
+                <dt>Persona asignada</dt>
+                <dd>{selectedTask.assigned_to_name || "Sin asignar"}</dd>
+              </div>
+              <div>
+                <dt>Estado</dt>
+                <dd>{formatStatus(selectedTask.status)}</dd>
+              </div>
+            </dl>
+
+            {errorMessage ? (
+              <p className={styles.feedbackMessage}>{errorMessage}</p>
+            ) : null}
+
+            <div className={styles.modalActions}>
+              <Button
+                className={styles.saveButton}
+                onClick={handleCompleteTask}
+                disabled={isPending || selectedTask.status !== "pending"}
+              >
+                {isPending ? "Marcando..." : "Marcar como hecha"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
 
       {isAddOpen ? (
         <div className={styles.modalBackdrop}>
@@ -520,13 +660,17 @@ export function LimpiezaScreen({
                 onClick={() => {
                   setHistoryTitle(null);
                   setHistoryTasks([]);
+                  setHasLoadedHistory(false);
                 }}
               >
                 Cerrar
               </button>
             </div>
+            {errorMessage ? (
+              <p className={styles.feedbackMessage}>{errorMessage}</p>
+            ) : null}
             <div className={styles.historyList}>
-              {isHistoryPending ? (
+              {isHistoryPending || !hasLoadedHistory ? (
                 <p className={styles.emptyModalText}>Cargando historial...</p>
               ) : historyTasks.length ? (
                 historyTasks.map((task) => (
@@ -536,8 +680,16 @@ export function LimpiezaScreen({
                       <small>
                         {task.zone_name} - {formatTaskDate(task.due_date)}
                       </small>
+                      <small>
+                        {task.assigned_to_name || "Sin asignar"} -{" "}
+                        {formatStatus(task.status)}
+                      </small>
+                      {task.notes ? <small>{task.notes}</small> : null}
+                      {task.status === "done" && task.completed_at ? (
+                        <small>{formatCompletedAt(task.completed_at)}</small>
+                      ) : null}
                     </div>
-                    <span>{task.assigned_to_name || "Sin asignar"}</span>
+                    <span>{formatStatus(task.status)}</span>
                   </div>
                 ))
               ) : (

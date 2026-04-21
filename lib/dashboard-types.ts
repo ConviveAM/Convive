@@ -139,6 +139,9 @@ export type CleaningTask = {
   zone_id: string | null;
   zone_name: string;
   notes: string | null;
+  status: string;
+  completed_at: string | null;
+  completed_by_profile_id: string | null;
 };
 
 export type CleaningZoneSection = {

@@ -290,6 +290,13 @@ function mapCleaningTask(
       toNullableStringValue(task.notes) ??
       toNullableStringValue(task.note) ??
       toNullableStringValue(task.description),
+    status: toStringValue(task.status, "pending"),
+    completed_at:
+      toNullableStringValue(task.completed_at) ??
+      toNullableStringValue(task.completedAt),
+    completed_by_profile_id:
+      toNullableStringValue(task.completed_by_profile_id) ??
+      toNullableStringValue(task.completed_by),
   };
 }
 
@@ -437,7 +444,7 @@ function readInvoiceSection(
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function toStringValue(value: unknown, fallback = "") {
@@ -1201,31 +1208,59 @@ export async function loadHouseCleaningTaskHistoryWithClient(
   zoneId: string | null = null,
   zoneName: string | null = null
 ) {
+  const zoneScopedAttempts = zoneId
+    ? [
+        {
+          args: {
+            p_house_public_code: houseCode,
+            p_zone_id: zoneId,
+            p_limit: limit,
+            p_offset: offset,
+          },
+          scopedByZone: true,
+        },
+        {
+          args: {
+            p_house_public_code: houseCode,
+            p_cleaning_zone_id: zoneId,
+            p_limit: limit,
+            p_offset: offset,
+          },
+          scopedByZone: true,
+        },
+      ]
+    : [];
   const attempts = [
+    ...zoneScopedAttempts,
     {
-      p_house_public_code: houseCode,
-      p_zone_id: zoneId,
-      p_limit: limit,
-      p_offset: offset,
+      args: {
+        p_house_public_code: houseCode,
+        p_zone_id: null,
+        p_limit: limit,
+        p_offset: offset,
+      },
+      scopedByZone: false,
     },
     {
-      p_house_public_code: houseCode,
-      p_cleaning_zone_id: zoneId,
-      p_limit: limit,
-      p_offset: offset,
+      args: { p_house_public_code: houseCode, p_limit: limit, p_offset: offset },
+      scopedByZone: false,
     },
-    { p_house_public_code: houseCode, p_limit: limit, p_offset: offset },
-    { house_public_code: houseCode, limit, offset },
+    { args: { house_public_code: houseCode, limit, offset }, scopedByZone: false },
   ];
   let data: unknown = null;
   let lastError: unknown = null;
+  let scopedByZone = false;
 
-  for (const args of attempts) {
-    const result = await supabase.rpc("get_house_cleaning_task_history", args);
+  for (const attempt of attempts) {
+    const result = await supabase.rpc(
+      "get_house_cleaning_task_history",
+      attempt.args
+    );
 
     if (!result.error) {
       data = result.data;
       lastError = null;
+      scopedByZone = attempt.scopedByZone;
       break;
     }
 
@@ -1234,20 +1269,36 @@ export async function loadHouseCleaningTaskHistoryWithClient(
 
   if (lastError) {
     console.error("get_house_cleaning_task_history failed", lastError);
-    return [];
+    throw lastError;
   }
 
   const tasks = isRecord(data)
     ? asArray<Record<string, unknown>>(
-        data.tasks ?? data.cleaning_tasks ?? data.history ?? data.items ?? data.rows
+        data.tasks ??
+          data.cleaning_tasks ??
+          data.history ??
+          data.items ??
+          data.rows ??
+          data.data
       ).map((task) => mapCleaningTask(task))
     : asArray<Record<string, unknown>>(data).map((task) => mapCleaningTask(task));
 
-  if (zoneId) {
+  if (zoneId && scopedByZone && tasks.length === 0 && zoneName) {
+    return loadHouseCleaningTaskHistoryWithClient(
+      supabase,
+      houseCode,
+      limit,
+      offset,
+      null,
+      zoneName
+    );
+  }
+
+  if (zoneId && !scopedByZone) {
     return tasks.filter((task) => task.zone_id === zoneId);
   }
 
-  if (zoneName) {
+  if (zoneName && !scopedByZone) {
     return tasks.filter(
       (task) => task.zone_name.toLowerCase() === zoneName.toLowerCase()
     );
