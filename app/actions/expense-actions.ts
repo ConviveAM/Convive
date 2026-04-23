@@ -55,6 +55,7 @@ function revalidateExpensePaths(dashboardPath: string) {
     `${dashboardPath}/gastos/anadir-ticket`,
     `${dashboardPath}/gastos/tickets`,
     `${dashboardPath}/gastos/division`,
+    `${dashboardPath}/gastos/validaciones`,
     `${dashboardPath}/gastos/simplificar`,
     `${dashboardPath}/gastos/simplificar/pago-simplificado`,
     `${dashboardPath}/area-personal`,

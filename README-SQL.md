@@ -5876,3 +5876,184 @@ end;
 $$;
 
 grant execute on function public.complete_cleaning_task(text, uuid) to authenticated;
+
+
+-- =========================================================
+-- GASTOS - VISIBILIDAD GLOBAL DE DIVISION Y VALIDACIONES
+-- Incremental: no cambia tablas ni columnas.
+-- - Division de gastos usa vista global del piso.
+-- - Validaciones pendientes son visibles para todos los miembros.
+-- - can_review indica si el usuario actual puede confirmar/rechazar.
+-- =========================================================
+
+create or replace function public.get_house_pending_payment_confirmations(
+  p_house_public_code text
+)
+returns table (
+  payment_id uuid,
+  expense_id uuid,
+  expense_title text,
+  from_profile_id uuid,
+  from_name text,
+  to_profile_id uuid,
+  to_name text,
+  amount numeric(10,2),
+  payment_date date,
+  note text,
+  status text,
+  can_review boolean
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    p.id as payment_id,
+    p.related_expense_id as expense_id,
+    se.title as expense_title,
+    p.from_profile_id,
+    public.profile_display_name(p.from_profile_id) as from_name,
+    p.to_profile_id,
+    public.profile_display_name(p.to_profile_id) as to_name,
+    p.amount,
+    p.payment_date,
+    p.note,
+    p.status,
+    public.can_review_expense_payment(v_house_id, p.related_expense_id) as can_review
+  from public.payments p
+  left join public.shared_expenses se
+    on se.id = p.related_expense_id
+   and se.house_id = v_house_id
+  where p.house_id = v_house_id
+    and p.status = 'pending'
+  order by p.created_at desc;
+end;
+$$;
+
+grant execute on function public.get_house_pending_payment_confirmations(text) to authenticated;
+
+
+create or replace function public.get_house_expenses_dashboard(
+  p_house_public_code text,
+  p_ticket_limit int default 10,
+  p_expense_limit int default 10
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_result jsonb;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  select jsonb_build_object(
+    'house', (
+      select jsonb_build_object(
+        'id', h.id,
+        'name', h.name,
+        'public_code', h.public_code
+      )
+      from public.houses h
+      where h.id = v_house_id
+    ),
+    'tickets', coalesce((
+      select jsonb_agg(to_jsonb(t))
+      from public.get_house_purchase_tickets(p_house_public_code, p_ticket_limit) t
+    ), '[]'::jsonb),
+    'shared_expenses', coalesce((
+      select jsonb_agg(to_jsonb(e))
+      from public.get_house_shared_expenses(p_house_public_code, p_expense_limit) e
+    ), '[]'::jsonb),
+    'settlements', coalesce((
+      select jsonb_agg(to_jsonb(s))
+      from public.get_house_payment_simplification(p_house_public_code) s
+    ), '[]'::jsonb),
+    'pending_payment_confirmations', coalesce((
+      select jsonb_agg(to_jsonb(pp))
+      from public.get_house_pending_payment_confirmations(p_house_public_code) pp
+    ), '[]'::jsonb)
+  )
+  into v_result;
+
+  return v_result;
+end;
+$$;
+
+grant execute on function public.get_house_expenses_dashboard(text, int, int) to authenticated;
+
+
+-- =========================================================
+-- GASTOS - TICKETS ABIERTOS SOLO SI SIGUEN PENDIENTES
+-- Primera pantalla de Gastos: no mostrar tickets ya liquidados.
+-- "Ver todo" (historial) mantiene el comportamiento completo.
+-- =========================================================
+
+create or replace function public.get_house_purchase_tickets(
+  p_house_public_code text,
+  p_limit int default 5
+)
+returns table (
+  ticket_id uuid,
+  display_title text,
+  merchant text,
+  purchase_date date,
+  paid_by_name text,
+  total_amount numeric(10,2),
+  currency text,
+  ticket_file_path text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    pt.id as ticket_id,
+    public.profile_display_name(pt.paid_by_profile_id)
+      || ' - ' ||
+      coalesce(nullif(trim(pt.title), ''), 'Compra ' || pt.merchant) as display_title,
+    pt.merchant,
+    pt.purchase_date,
+    public.profile_display_name(pt.paid_by_profile_id) as paid_by_name,
+    pt.total_amount,
+    pt.currency,
+    pt.ticket_file_path
+  from public.purchase_tickets pt
+  left join public.shared_expenses se
+    on se.source_ticket_id = pt.id
+   and se.house_id = pt.house_id
+   and se.status = 'active'
+  where pt.house_id = v_house_id
+    and pt.status = 'active'
+    and (
+      se.id is null
+      or coalesce(se.settlement_status, 'open') <> 'settled'
+    )
+  order by pt.purchase_date desc, pt.created_at desc
+  limit greatest(p_limit, 1);
+end;
+$$;
+
+grant execute on function public.get_house_purchase_tickets(text, int) to authenticated;

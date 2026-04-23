@@ -19,6 +19,7 @@ import { GastosPagoSimplificadoScreen } from "../../../../../components/gastos/g
 import { GastosScreen } from "../../../../../components/gastos/gastos-screen";
 import { GastosSimplificarScreen } from "../../../../../components/gastos/gastos-simplificar-screen";
 import { GastosTicketsScreen } from "../../../../../components/gastos/gastos-tickets-screen";
+import { GastosValidacionesScreen } from "../../../../../components/gastos/gastos-validaciones-screen";
 import { HerramientasEntraScreen } from "../../../../../components/herramientas/herramientas-entra-screen";
 import { HerramientasScreen } from "../../../../../components/herramientas/herramientas-screen";
 import { HomeBoard } from "../../../../../components/home/home-board";
@@ -33,7 +34,6 @@ import {
   loadHouseInvoicesDashboardWithClient,
   loadAddCleaningTaskFormOptionsWithClient,
   loadHouseCleaningDashboardWithClient,
-  loadCurrentUserExpenseStatesWithClient,
   loadHouseExpensesDashboardWithClient,
   loadHousePendingPaymentConfirmationsWithClient,
   loadHousePurchaseTicketsHistoryWithClient,
@@ -421,7 +421,10 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         50
       )
     : null;
-  const pendingPaymentConfirmations = sectionPath === "gastos" || sectionPath === "gastos/division"
+  const pendingPaymentConfirmations =
+    sectionPath === "gastos" ||
+    sectionPath === "gastos/division" ||
+    sectionPath === "gastos/validaciones"
     ? await loadHousePendingPaymentConfirmationsWithClient(
         routeContext.supabase,
         routeContext.house.public_code
@@ -463,13 +466,6 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
           100,
           0
         )
-      : [];
-  const currentUserExpenseStates =
-    sectionPath === "gastos/division"
-      ? await loadCurrentUserExpenseStatesWithClient(routeContext.supabase, {
-          houseCode: routeContext.house.public_code,
-          expenseIds: sharedExpensesHistory.map((expense) => expense.expense_id),
-        })
       : [];
   const addExpenseFormOptions =
     sectionPath === "gastos/anadir-ticket"
@@ -515,12 +511,20 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
         sharedExpenses={sharedExpensesHistory}
-        currentProfileId={routeContext.profile.id}
-        currentUserExpenseStates={currentUserExpenseStates}
-        pendingPaymentConfirmations={pendingPaymentConfirmations}
-        canReviewPayments={canReviewExpensePayments}
       />
       ,
+      routeContext.dashboardPath,
+      "gastos"
+    );
+  }
+
+  if (sectionPath === "gastos/validaciones") {
+    return withMiniDoor(
+      <GastosValidacionesScreen
+        houseCode={routeContext.house.public_code}
+        dashboardPath={routeContext.dashboardPath}
+        pendingPaymentConfirmations={pendingPaymentConfirmations}
+      />,
       routeContext.dashboardPath,
       "gastos"
     );
