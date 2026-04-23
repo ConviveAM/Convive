@@ -262,6 +262,7 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
       <AjustesScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+        isAdmin={isHouseAdmin}
       />,
       routeContext.dashboardPath,
       "ajustes"

@@ -4,14 +4,26 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "../ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import styles from "./ajustes-screen.module.css";
 
 type AjustesScreenProps = {
   houseCode: string;
   dashboardPath: string;
+  isAdmin: boolean;
 };
 
-export function AjustesScreen({ houseCode, dashboardPath }: AjustesScreenProps) {
+export function AjustesScreen({ houseCode, dashboardPath, isAdmin }: AjustesScreenProps) {
   const basePath = dashboardPath;
   const avatars = [
     "/images/IconoperfilM.webp",
@@ -150,6 +162,27 @@ export function AjustesScreen({ houseCode, dashboardPath }: AjustesScreenProps) 
                 Editar
               </button>
             </div>
+            {isAdmin ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button type="button" className={styles.deleteParticipantButton}>
+                    Eliminar participante
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Eliminar participante</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción eliminará al participante del piso. ¿Quieres continuar?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction>Eliminar</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
           </Card>
 
           <Card className={`${styles.block} ${styles.appBlock}`}>
