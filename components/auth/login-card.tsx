@@ -263,9 +263,6 @@ export function LoginCard({
         </div>
 
         <div className={styles.panel}>
-          {globalError ? <p className={styles.error}>{globalError}</p> : null}
-          {globalSuccess ? <p className={styles.success}>{globalSuccess}</p> : null}
-
           {homeAction === "create" ? (
             <form
               className={styles.form}
@@ -321,6 +318,9 @@ export function LoginCard({
                 ) : null}
               </div>
 
+              {globalError ? <p className={styles.error}>{globalError}</p> : null}
+              {globalSuccess ? <p className={styles.success}>{globalSuccess}</p> : null}
+
               <Button type="submit" className={styles.submit} disabled={isPending}>
                 {isPending ? "Creando..." : "Entrar"}
               </Button>
@@ -355,6 +355,9 @@ export function LoginCard({
                 ) : null}
               </div>
 
+              {globalError ? <p className={styles.error}>{globalError}</p> : null}
+              {globalSuccess ? <p className={styles.success}>{globalSuccess}</p> : null}
+
               <Button type="submit" className={styles.submit} disabled={isPending}>
                 {isPending ? "Uniendome..." : "Unirme"}
               </Button>
@@ -383,9 +386,6 @@ export function LoginCard({
         </div>
 
         <div className={styles.panel}>
-          {globalError ? <p className={styles.error}>{globalError}</p> : null}
-          {globalSuccess ? <p className={styles.success}>{globalSuccess}</p> : null}
-
           <TabsContent value="login">
             <form
               className={styles.form}
@@ -441,6 +441,9 @@ export function LoginCard({
                   </p>
                 ) : null}
               </div>
+
+              {globalError ? <p className={styles.error}>{globalError}</p> : null}
+              {globalSuccess ? <p className={styles.success}>{globalSuccess}</p> : null}
 
               <Link href="/reset-password" className={styles.forgot}>
                 Olvidaste tu contraseña?
@@ -532,6 +535,9 @@ export function LoginCard({
                   </p>
                 ) : null}
               </div>
+
+              {globalError ? <p className={styles.error}>{globalError}</p> : null}
+              {globalSuccess ? <p className={styles.success}>{globalSuccess}</p> : null}
 
               <Button type="submit" className={styles.submit} disabled={isPending}>
                 {isPending ? "Creando cuenta..." : "Siguiente"}

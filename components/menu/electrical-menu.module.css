@@ -364,6 +364,11 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .switchLabel {
+    font-size: clamp(0.66rem, 0.88vw, 0.8rem);
+    white-space: nowrap;
+  }
+
   .logoutItem {
     grid-column: 4;
   }

@@ -70,6 +70,11 @@ function formatMonthlyMeta(current: number, previous: number) {
   return `${percent > 0 ? "+" : ""}${percent}% que el mes anterior`;
 }
 
+function formatPendingPaymentsMeta(countValue: number | string | null | undefined) {
+  const count = Math.max(0, Math.trunc(toNumber(countValue)));
+  return `${count} ${count === 1 ? "pago pendiente" : "pagos pendientes"}`;
+}
+
 function buildChartData(data: PersonalAreaDashboardData) {
   const total = data.chart.reduce((sum, item) => sum + toNumber(item.amount), 0);
 
@@ -107,12 +112,12 @@ export function AreaPersonalScreen({
     {
       title: "Mis deudas",
       value: formatCurrency(data.summary.my_debts_total),
-      meta: `${data.summary.my_debts_count} pagos pendientes`,
+      meta: formatPendingPaymentsMeta(data.summary.my_debts_count),
     },
     {
       title: "Me deben",
       value: formatCurrency(data.summary.owed_to_me_total),
-      meta: `${data.summary.owed_to_me_count} pagos pendientes`,
+      meta: formatPendingPaymentsMeta(data.summary.owed_to_me_count),
     },
     {
       title: "Gastos del mes",
