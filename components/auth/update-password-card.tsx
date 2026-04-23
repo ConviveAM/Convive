@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
-import { createClient as createSupabaseClient } from "../../utils/supabase/client";
+import { createSupabaseBrowserClient } from "../../lib/supabase-browser";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import styles from "./update-password-card.module.css";
@@ -18,7 +18,7 @@ export function UpdatePasswordCard() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isPending, startTransition] = useTransition();
-  const supabase = createSupabaseClient();
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     let isMounted = true;

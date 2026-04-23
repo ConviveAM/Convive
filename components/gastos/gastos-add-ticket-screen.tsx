@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { createPendingTicketExpenseAction } from "../../app/actions/expense-actions";
+import { createPendingTicketExpenseAction } from "../../app/backend/endpoints/gastos/actions";
 import type { AddExpenseFormOptions } from "../../lib/dashboard-types";
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";

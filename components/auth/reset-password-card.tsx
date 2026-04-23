@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 
-import { createClient as createSupabaseClient } from "../../utils/supabase/client";
+import { createSupabaseBrowserClient } from "../../lib/supabase-browser";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import styles from "./reset-password-card.module.css";
@@ -27,7 +27,7 @@ export function ResetPasswordCard() {
     setSuccessMessage("");
 
     startTransition(async () => {
-      const supabase = createSupabaseClient();
+      const supabase = createSupabaseBrowserClient();
       const redirectTo = `${window.location.origin}/auth/callback`;
       const { error } = await supabase.auth.resetPasswordForEmail(
         normalizedEmail,

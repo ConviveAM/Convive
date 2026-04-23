@@ -9,7 +9,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
   adminConfirmPaymentAction,
   requestExpensePaymentConfirmationAction,
-} from "../../app/actions/expense-actions";
+} from "../../app/backend/endpoints/gastos/actions";
 import type {
   PersonalAreaCalendarEvent,
   PersonalAreaDashboardData,

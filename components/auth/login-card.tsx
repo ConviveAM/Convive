@@ -12,11 +12,11 @@ import {
   signInAndJoinHouseWithEmail,
   signInWithEmail,
   signUpWithEmail,
-} from "../../app/actions/auth-actions";
+} from "../../app/backend/endpoints/auth/actions";
 import {
   createHouseAction,
   joinHouseAction,
-} from "../../app/actions/house-actions";
+} from "../../app/backend/endpoints/auth/actions";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";

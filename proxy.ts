@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 
-import { updateSession } from "./utils/supabase/middleware";
+import { updateSession } from "./app/backend/endpoints/auth/session";
 
 export function proxy(request: NextRequest) {
   return updateSession(request);

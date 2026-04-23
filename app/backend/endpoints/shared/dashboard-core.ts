@@ -27,7 +27,7 @@ import type {
   Settlement,
   SharedExpense,
 } from "./dashboard-types";
-import { createClient } from "../utils/supabase/server";
+import { createClient } from "./supabase-server";
 
 type ProfileRecord = {
   id: string;

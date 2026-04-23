@@ -1,10 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Plus } from "lucide-react";
+import { useState, useTransition } from "react";
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useRouter } from "next/navigation";
+import {
+  Bar,
+  BarChart,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import {
+  addShoppingListItemAction,
+  clearShoppingListAction,
+  deleteShoppingListItemAction,
+  toggleShoppingListItemAction,
+  updateMonthlyBudgetAction,
+} from "../../app/backend/endpoints/area-grupal/actions";
+import { formatCurrency } from "../../lib/dashboard-presenters";
+import type { AreaGrupalDashboardData } from "../../lib/dashboard-types";
+import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
@@ -16,45 +38,31 @@ type AreaGrupalScreenProps = {
   dashboardPath: string;
   inviteCode: string | null;
   canManageInvites: boolean;
+  data: AreaGrupalDashboardData;
 };
 
-const barData = [
-  { month: "Ene", value: 900 },
-  { month: "Feb", value: 1200 },
-  { month: "Mar", value: 1000 },
-  { month: "Abr", value: 1250 },
-];
+const PIE_COLORS = ["#78A978", "#8FB7D8", "#E9B553", "#CE9A6C", "#BE6F8B", "#8B1A2F", "#A59A90"];
 
-const MONTH_LABELS = [
-  "Ene",
-  "Feb",
-  "Mar",
-  "Abr",
-  "May",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dic",
-] as const;
+function toNumber(value: number | string | null | undefined) {
+  const numericValue =
+    typeof value === "number" ? value : Number(String(value ?? 0));
 
-const pieData = [
-  { name: "Alquiler", value: 35, color: "#78A978" },
-  { name: "Agua", value: 12, color: "#8FB7D8" },
-  { name: "Luz", value: 14, color: "#E9B553" },
-  { name: "Wifi", value: 11, color: "#CE9A6C" },
-  { name: "Compras", value: 18, color: "#BE6F8B" },
-  { name: "Suscripciones", value: 10, color: "#8B1A2F" },
-];
+  return Number.isFinite(numericValue) ? numericValue : 0;
+}
 
-const compareItems = [
-  { name: "Luz", currentAmount: 50, previousAmount: 43, text: "15% mas que el mes pasado" },
-  { name: "Agua", currentAmount: 50, previousAmount: 43, text: "15% mas que el mes pasado" },
-  { name: "Alquiler", currentAmount: 50, previousAmount: 43, text: "15% mas que el mes pasado" },
-  { name: "Wifi", currentAmount: 50, previousAmount: 50, text: "Igual que el ano pasado" },
-];
+function formatPercentChange(percentChange: number | null) {
+  if (percentChange === null) {
+    return "Sin datos comparables del mes anterior";
+  }
+
+  if (percentChange === 0) {
+    return "Igual que el mes pasado";
+  }
+
+  return `${Math.abs(percentChange)}% ${
+    percentChange > 0 ? "más" : "menos"
+  } que el mes pasado`;
+}
 
 function getTrend(currentAmount: number, previousAmount: number) {
   if (currentAmount > previousAmount) return "up";
@@ -67,26 +75,158 @@ export function AreaGrupalScreen({
   dashboardPath,
   inviteCode,
   canManageInvites,
+  data,
 }: AreaGrupalScreenProps) {
-  const budgetAmount = 50;
-  const spentAmount = 30;
-  const isOverBudget = spentAmount > budgetAmount;
-  const [currentMonthLabel, setCurrentMonthLabel] = useState<string | null>(null);
-
-  useEffect(() => {
-    setCurrentMonthLabel(MONTH_LABELS[new Date().getMonth()]);
-  }, []);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [newItemText, setNewItemText] = useState("");
+  const [budgetInput, setBudgetInput] = useState(
+    String(toNumber(data.shared_funds.budget_amount))
+  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const basePath = dashboardPath ?? `/dashboard/${houseCode}`;
   const inviteHref = inviteCode
     ? `/login?flow=join&code=${encodeURIComponent(inviteCode)}`
     : null;
+  const budgetAmount = toNumber(data.shared_funds.budget_amount);
+  const spentAmount = toNumber(data.shared_funds.spent_amount);
+  const progressBase = budgetAmount + spentAmount;
+  const progressValue =
+    progressBase > 0 ? Math.min((spentAmount / progressBase) * 100, 100) : 0;
+  const isOverBudget = spentAmount > budgetAmount && budgetAmount > 0;
+  const distributionData = data.distribution.map((item, index) => ({
+    ...item,
+    color: PIE_COLORS[index % PIE_COLORS.length],
+  }));
+
+  const runAction = (action: () => Promise<void>) => {
+    setErrorMessage(null);
+    startTransition(async () => {
+      await action();
+    });
+  };
+
+  const handleAddItem = () => {
+    const normalizedText = newItemText.trim();
+    if (!normalizedText) {
+      setErrorMessage("Escribe un artículo para añadirlo a la lista.");
+      return;
+    }
+
+    runAction(async () => {
+      const result = await addShoppingListItemAction({
+        houseCode,
+        dashboardPath: basePath,
+        text: normalizedText,
+      });
+
+      if (result.success) {
+        setNewItemText("");
+        router.refresh();
+        return;
+      }
+
+      if ("error" in result) {
+        setErrorMessage(result.error);
+      }
+    });
+  };
+
+  const handleToggleItem = (itemId: string) => {
+    runAction(async () => {
+      const result = await toggleShoppingListItemAction({
+        houseCode,
+        dashboardPath: basePath,
+        itemId,
+      });
+
+      if (result.success) {
+        router.refresh();
+        return;
+      }
+
+      if ("error" in result) {
+        setErrorMessage(result.error);
+      }
+    });
+  };
+
+  const handleDeleteItem = (itemId: string) => {
+    runAction(async () => {
+      const result = await deleteShoppingListItemAction({
+        houseCode,
+        dashboardPath: basePath,
+        itemId,
+      });
+
+      if (result.success) {
+        router.refresh();
+        return;
+      }
+
+      if ("error" in result) {
+        setErrorMessage(result.error);
+      }
+    });
+  };
+
+  const handleClearShoppingList = () => {
+    runAction(async () => {
+      const result = await clearShoppingListAction({
+        houseCode,
+        dashboardPath: basePath,
+      });
+
+      if (result.success) {
+        router.refresh();
+        return;
+      }
+
+      if ("error" in result) {
+        setErrorMessage(result.error);
+      }
+    });
+  };
+
+  const handleSaveBudget = () => {
+    const parsedAmount = Number(budgetInput.replace(",", "."));
+
+    if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
+      setErrorMessage("Introduce un presupuesto mensual válido.");
+      return;
+    }
+
+    runAction(async () => {
+      const result = await updateMonthlyBudgetAction({
+        houseCode,
+        dashboardPath: basePath,
+        amount: parsedAmount,
+      });
+
+      if (result.success) {
+        router.refresh();
+        return;
+      }
+
+      if ("error" in result) {
+        setErrorMessage(result.error);
+      }
+    });
+  };
+
   return (
     <main className={styles.page}>
       <section className={styles.panel}>
         <header className={styles.header}>
           <Link href={`${basePath}/menu`} className={styles.backLink}>
-            <Image src="/iconos/flechaatras.svg" alt="Volver" width={20} height={20} className={styles.backIcon} />
+            <Image
+              src="/iconos/flechaatras.svg"
+              alt="Volver"
+              width={20}
+              height={20}
+              className={styles.backIcon}
+            />
           </Link>
           <div className={styles.headerCenter}>
             <h1 className={styles.title}>Area grupal</h1>
@@ -100,12 +240,21 @@ export function AreaGrupalScreen({
             <div>
               <h2 className={styles.sectionTitle}>Miembros del piso</h2>
               <div className={styles.membersRow}>
-                {["Laura", "Samanta", "Julia", "Estela"].map((name) => (
-                  <div key={name} className={styles.memberItem}>
-                    <Image src="/images/IconoperfilM.webp" alt={name} width={28} height={28} />
-                    <span>{name}</span>
-                  </div>
-                ))}
+                {data.members.length ? (
+                  data.members.map((member) => (
+                    <div key={member.profile_id} className={styles.memberItem}>
+                      <Image
+                        src={member.avatar_url || "/images/IconoperfilM.webp"}
+                        alt={member.display_name}
+                        width={28}
+                        height={28}
+                      />
+                      <span>{member.display_name}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className={styles.emptyInline}>No hay miembros activos.</p>
+                )}
               </div>
             </div>
             <div className={styles.inviteBox}>
@@ -128,17 +277,75 @@ export function AreaGrupalScreen({
             </div>
           </Card>
 
+          {errorMessage ? <p className={styles.feedbackMessage}>{errorMessage}</p> : null}
+
           <div className={styles.gridTwo}>
             <Card className={styles.whiteCard}>
-              <h3 className={styles.whiteTitle}>Lista de la compra</h3>
-              <div className={styles.checkList}>
-                <label><Checkbox className={styles.checkbox} /> Leche</label>
-                <label><Checkbox className={styles.checkbox} /> Huevos</label>
-                <label><Checkbox className={styles.checkbox} /> Agua</label>
+              <div className={styles.listHeader}>
+                <h3 className={styles.whiteTitle}>Lista de la compra</h3>
+                <button
+                  type="button"
+                  className={styles.clearListButton}
+                  onClick={handleClearShoppingList}
+                  disabled={isPending || data.shopping_list.length === 0}
+                >
+                  Borrar todo
+                </button>
+              </div>
+              <div className={styles.shoppingList}>
+                {data.shopping_list.length ? (
+                  data.shopping_list.map((item) => (
+                    <div key={item.item_id} className={styles.shoppingItem}>
+                      <label className={styles.shoppingLabel}>
+                        <Checkbox
+                          className={styles.checkbox}
+                          checked={item.is_checked}
+                          onCheckedChange={() => handleToggleItem(item.item_id)}
+                          disabled={isPending}
+                        />
+                        <span
+                          className={item.is_checked ? styles.shoppingTextChecked : ""}
+                        >
+                          {item.text}
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        className={styles.deleteItemButton}
+                        onClick={() => handleDeleteItem(item.item_id)}
+                        disabled={isPending}
+                        aria-label="Borrar artículo"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className={styles.emptyState}>La lista está vacía.</p>
+                )}
               </div>
               <div className={styles.addRow}>
-                <Input placeholder="Escribe el nuevo articulo" className={styles.newInput} />
-                <Plus size={16} className={styles.plusSmall} />
+                <Input
+                  placeholder="Escribe el nuevo articulo"
+                  className={styles.newInput}
+                  value={newItemText}
+                  onChange={(event) => setNewItemText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleAddItem();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className={styles.addItemButton}
+                  onClick={handleAddItem}
+                  disabled={isPending}
+                  aria-label="Añadir artículo"
+                >
+                  <Plus size={16} className={styles.plusSmall} />
+                </button>
               </div>
             </Card>
 
@@ -147,40 +354,71 @@ export function AreaGrupalScreen({
               <div className={styles.moneyRows}>
                 <p>
                   <span>Presupuesto</span>
-                  <strong className={styles.budgetAmount}>{`${budgetAmount}\u20AC`}</strong>
+                  <strong className={styles.budgetAmount}>
+                    {formatCurrency(data.shared_funds.budget_amount)}
+                  </strong>
                 </p>
                 <p>
                   <span>Gastado</span>
                   <strong className={isOverBudget ? styles.spentAmountOver : styles.spentAmount}>
-                    {`${spentAmount}\u20AC`}
+                    {formatCurrency(data.shared_funds.spent_amount)}
                   </strong>
                 </p>
               </div>
-              <Progress value={60} className={styles.progressRoot} />
+              <Progress value={progressValue} className={styles.progressRoot} />
+              {canManageInvites && data.shared_funds.can_edit_budget ? (
+                <div className={styles.budgetEditor}>
+                  <Input
+                    value={budgetInput}
+                    onChange={(event) => setBudgetInput(event.target.value)}
+                    className={styles.budgetInput}
+                    inputMode="decimal"
+                    placeholder="0"
+                  />
+                  <Button
+                    className={styles.budgetSaveButton}
+                    onClick={handleSaveBudget}
+                    disabled={isPending}
+                  >
+                    Guardar
+                  </Button>
+                </div>
+              ) : null}
             </Card>
           </div>
 
           <Card className={styles.maroonCard}>
             <h3 className={styles.maroonTitle}>Gastos del mes</h3>
-            <p className={styles.monthValue}>1500€</p>
-            <p className={styles.monthMeta}>15% mas que el mes pasado</p>
+            <p className={styles.monthValue}>
+              {formatCurrency(data.monthly_expenses.current_total)}
+            </p>
+            <p className={styles.monthMeta}>
+              {formatPercentChange(data.monthly_expenses.percent_change)}
+            </p>
             <div className={styles.chartWrap}>
               <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={barData} margin={{ top: 10, right: 18, left: 10, bottom: 0 }}>
-                  <XAxis dataKey="month" tick={{ fill: "#F0EAE4", fontSize: 12 }} axisLine={{ stroke: "#F0EAE4" }} />
+                <BarChart
+                  data={data.monthly_expenses.series}
+                  margin={{ top: 10, right: 18, left: 10, bottom: 0 }}
+                >
+                  <XAxis
+                    dataKey="month_label"
+                    tick={{ fill: "#F0EAE4", fontSize: 12 }}
+                    axisLine={{ stroke: "#F0EAE4" }}
+                  />
                   <YAxis hide />
                   <Tooltip
                     cursor={false}
-                    formatter={(value) => [value, "valor"]}
+                    formatter={(value) => [formatCurrency(value as number), "Total"]}
                     contentStyle={{ color: "#111111" }}
                     labelStyle={{ color: "#111111" }}
                     itemStyle={{ color: "#111111" }}
                   />
-                  <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={34}>
-                    {barData.map((entry) => (
+                  <Bar dataKey="total_amount" radius={[6, 6, 0, 0]} maxBarSize={34}>
+                    {data.monthly_expenses.series.map((entry) => (
                       <Cell
-                        key={entry.month}
-                        fill={entry.month === currentMonthLabel ? "#BE6F8B" : "#F0EAE4"}
+                        key={entry.month_key}
+                        fill={entry.is_current_month ? "#BE6F8B" : "#F0EAE4"}
                       />
                     ))}
                   </Bar>
@@ -195,13 +433,24 @@ export function AreaGrupalScreen({
               <div className={styles.pieRow}>
                 <ResponsiveContainer width={160} height={160}>
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={58} innerRadius={34}>
-                      {pieData.map((entry) => (
+                    <Pie
+                      data={distributionData}
+                      dataKey="amount"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={58}
+                      innerRadius={34}
+                    >
+                      {distributionData.map((entry) => (
                         <Cell key={entry.name} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value, name) => [value, name]}
+                      formatter={(value, name) => [
+                        formatCurrency(value as number),
+                        name,
+                      ]}
                       contentStyle={{ color: "#111111" }}
                       labelStyle={{ color: "#111111" }}
                       itemStyle={{ color: "#111111" }}
@@ -209,12 +458,16 @@ export function AreaGrupalScreen({
                   </PieChart>
                 </ResponsiveContainer>
                 <ul className={styles.legend}>
-                  {pieData.map((entry) => (
-                    <li key={entry.name}>
-                      <span style={{ background: entry.color }} />
-                      {entry.name}
-                    </li>
-                  ))}
+                  {distributionData.length ? (
+                    distributionData.map((entry) => (
+                      <li key={entry.name}>
+                        <span style={{ background: entry.color }} />
+                        {entry.name}
+                      </li>
+                    ))
+                  ) : (
+                    <li>Sin gastos este mes</li>
+                  )}
                 </ul>
               </div>
             </Card>
@@ -222,28 +475,40 @@ export function AreaGrupalScreen({
             <Card className={styles.whiteCard}>
               <h3 className={styles.whiteTitle}>Comparativas de meses</h3>
               <ul className={styles.compareList}>
-                {compareItems.map((item) => (
-                  <li key={item.name}>
-                    <div className={styles.compareLeft}>
-                      <Image src="/images/IconoperfilH.webp" alt="" width={20} height={20} />
-                      <div>
-                        <p>{item.name}</p>
-                        <small>{item.text}</small>
-                      </div>
-                    </div>
-                    <div className={styles.compareRight}>
-                      <strong>{`${item.currentAmount}\u20AC`}</strong>
-                      <span className={styles.arrowSlot} aria-hidden="true">
-                        {getTrend(item.currentAmount, item.previousAmount) === "up" ? (
-                          <ArrowUp size={14} />
-                        ) : null}
-                        {getTrend(item.currentAmount, item.previousAmount) === "down" ? (
-                          <ArrowDown size={14} />
-                        ) : null}
-                      </span>
-                    </div>
-                  </li>
-                ))}
+                {data.comparisons.length ? (
+                  data.comparisons.map((item) => {
+                    const trend = getTrend(
+                      toNumber(item.current_amount),
+                      toNumber(item.previous_amount)
+                    );
+
+                    return (
+                      <li key={item.name}>
+                        <div className={styles.compareLeft}>
+                          <Image
+                            src="/images/IconoperfilH.webp"
+                            alt=""
+                            width={20}
+                            height={20}
+                          />
+                          <div>
+                            <p>{item.name}</p>
+                            <small>{formatPercentChange(item.percent_change)}</small>
+                          </div>
+                        </div>
+                        <div className={styles.compareRight}>
+                          <strong>{formatCurrency(item.current_amount)}</strong>
+                          <span className={styles.arrowSlot} aria-hidden="true">
+                            {trend === "up" ? <ArrowUp size={14} /> : null}
+                            {trend === "down" ? <ArrowDown size={14} /> : null}
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })
+                ) : (
+                  <li className={styles.compareEmpty}>Sin comparativas todavía.</li>
+                )}
               </ul>
             </Card>
           </div>
@@ -252,4 +517,3 @@ export function AreaGrupalScreen({
     </main>
   );
 }
-

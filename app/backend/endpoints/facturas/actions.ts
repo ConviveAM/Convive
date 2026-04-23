@@ -1,12 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
-import { getAuthenticatedProfileContext } from "../../lib/dashboard";
-
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+import { getAuthenticatedProfileContext } from "../auth/queries";
+import type { ActionResult } from "../shared/action-result";
+import { toActionError } from "../shared/action-result";
+import { revalidatePaths } from "../shared/revalidate";
 
 type CreatePendingInvoiceExpenseInput = {
   houseCode: string;
@@ -28,16 +25,8 @@ type AdminMarkInvoicePaidInput = {
   expenseId: string;
 };
 
-function toActionError(error: unknown) {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return "Ha ocurrido un error inesperado.";
-}
-
 function revalidateInvoicePaths(dashboardPath: string) {
-  const paths = [
+  revalidatePaths([
     dashboardPath,
     `${dashboardPath}/facturas`,
     `${dashboardPath}/facturas/anadir-factura`,
@@ -46,11 +35,7 @@ function revalidateInvoicePaths(dashboardPath: string) {
     `${dashboardPath}/facturas/wifi`,
     `${dashboardPath}/facturas/agua`,
     `${dashboardPath}/facturas/luz`,
-  ];
-
-  for (const path of paths) {
-    revalidatePath(path);
-  }
+  ]);
 }
 
 export async function createPendingInvoiceExpenseAction(

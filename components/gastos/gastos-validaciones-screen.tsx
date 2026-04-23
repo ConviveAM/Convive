@@ -8,7 +8,7 @@ import { useState, useTransition } from "react";
 import {
   adminConfirmPaymentAction,
   adminRejectPaymentAction,
-} from "../../app/actions/expense-actions";
+} from "../../app/backend/endpoints/gastos/actions";
 import type { PendingPaymentConfirmation } from "../../lib/dashboard-types";
 import { formatCurrency, formatShortDate } from "../../lib/dashboard-presenters";
 import { Button } from "../ui/button";

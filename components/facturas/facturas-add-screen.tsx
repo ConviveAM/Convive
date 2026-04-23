@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { createPendingInvoiceExpenseAction } from "../../app/actions/invoice-actions";
+import { createPendingInvoiceExpenseAction } from "../../app/backend/endpoints/facturas/actions";
 import type { AddInvoiceFormOptions } from "../../lib/dashboard-types";
 import type {
   TicketScannerCategory,

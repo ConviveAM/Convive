@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { adminMarkInvoicePaidAction } from "../../app/actions/invoice-actions";
+import { adminMarkInvoicePaidAction } from "../../app/backend/endpoints/facturas/actions";
 import {
   formatCurrency,
   formatShortDate,

@@ -1046,6 +1046,523 @@ $$;
 grant execute on function public.profile_display_name(uuid) to authenticated;
 grant execute on function public.get_accessible_house_id(text) to authenticated;
 grant execute on function public.get_house_purchase_tickets(text, int) to authenticated;
+
+
+-- =========================================================
+-- AREA GRUPAL - LISTA DE LA COMPRA Y PRESUPUESTO MENSUAL
+-- Añadido al final sin tocar bloques anteriores.
+-- =========================================================
+
+create table if not exists public.house_shopping_list_items (
+  id uuid primary key default gen_random_uuid(),
+  house_id uuid not null references public.houses(id) on delete cascade,
+  text text not null,
+  is_checked boolean not null default false,
+  created_by_profile_id uuid references public.profiles(id) on delete set null,
+  checked_by_profile_id uuid references public.profiles(id) on delete set null,
+  checked_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists house_shopping_list_items_house_created_idx
+on public.house_shopping_list_items (house_id, created_at desc);
+
+drop trigger if exists set_house_shopping_list_items_updated_at on public.house_shopping_list_items;
+create trigger set_house_shopping_list_items_updated_at
+before update on public.house_shopping_list_items
+for each row execute function public.set_updated_at();
+
+create table if not exists public.house_monthly_budgets (
+  id uuid primary key default gen_random_uuid(),
+  house_id uuid not null references public.houses(id) on delete cascade,
+  budget_month date not null,
+  amount numeric(10,2) not null default 0 check (amount >= 0),
+  created_by_profile_id uuid references public.profiles(id) on delete set null,
+  updated_by_profile_id uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (house_id, budget_month)
+);
+
+create index if not exists house_monthly_budgets_house_month_idx
+on public.house_monthly_budgets (house_id, budget_month desc);
+
+drop trigger if exists set_house_monthly_budgets_updated_at on public.house_monthly_budgets;
+create trigger set_house_monthly_budgets_updated_at
+before update on public.house_monthly_budgets
+for each row execute function public.set_updated_at();
+
+alter table public.house_shopping_list_items enable row level security;
+alter table public.house_monthly_budgets enable row level security;
+
+drop policy if exists "house_shopping_list_items_select_if_member" on public.house_shopping_list_items;
+create policy "house_shopping_list_items_select_if_member"
+on public.house_shopping_list_items
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.house_members hm
+    where hm.house_id = house_shopping_list_items.house_id
+      and hm.profile_id = auth.uid()
+      and hm.is_active = true
+  )
+);
+
+drop policy if exists "house_shopping_list_items_modify_if_member" on public.house_shopping_list_items;
+create policy "house_shopping_list_items_modify_if_member"
+on public.house_shopping_list_items
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.house_members hm
+    where hm.house_id = house_shopping_list_items.house_id
+      and hm.profile_id = auth.uid()
+      and hm.is_active = true
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.house_members hm
+    where hm.house_id = house_shopping_list_items.house_id
+      and hm.profile_id = auth.uid()
+      and hm.is_active = true
+  )
+);
+
+drop policy if exists "house_monthly_budgets_select_if_member" on public.house_monthly_budgets;
+create policy "house_monthly_budgets_select_if_member"
+on public.house_monthly_budgets
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.house_members hm
+    where hm.house_id = house_monthly_budgets.house_id
+      and hm.profile_id = auth.uid()
+      and hm.is_active = true
+  )
+);
+
+drop policy if exists "house_monthly_budgets_modify_if_admin" on public.house_monthly_budgets;
+create policy "house_monthly_budgets_modify_if_admin"
+on public.house_monthly_budgets
+for all
+to authenticated
+using (
+  public.is_house_admin(house_monthly_budgets.house_id)
+  or public.is_house_creator(house_monthly_budgets.house_id)
+)
+with check (
+  public.is_house_admin(house_monthly_budgets.house_id)
+  or public.is_house_creator(house_monthly_budgets.house_id)
+);
+
+create or replace function public.get_house_monthly_budget(
+  p_house_public_code text,
+  p_target_month date default current_date
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_budget_month date;
+  v_amount numeric(10,2);
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+  v_budget_month := date_trunc('month', coalesce(p_target_month, current_date))::date;
+
+  select hmb.amount
+  into v_amount
+  from public.house_monthly_budgets hmb
+  where hmb.house_id = v_house_id
+    and hmb.budget_month = v_budget_month
+  limit 1;
+
+  return jsonb_build_object(
+    'budget_month', to_char(v_budget_month, 'YYYY-MM'),
+    'budget_amount', coalesce(v_amount, 0),
+    'can_edit',
+      (
+        public.is_house_admin(v_house_id)
+        or public.is_house_creator(v_house_id)
+      )
+  );
+end;
+$$;
+
+grant execute on function public.get_house_monthly_budget(text, date) to authenticated;
+
+create or replace function public.set_house_monthly_budget(
+  p_house_public_code text,
+  p_amount numeric,
+  p_target_month date default current_date
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_budget_month date;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not (
+    public.is_house_admin(v_house_id)
+    or public.is_house_creator(v_house_id)
+  ) then
+    raise exception 'No autorizado para actualizar el presupuesto';
+  end if;
+
+  if p_amount is null or p_amount < 0 then
+    raise exception 'El presupuesto debe ser 0 o mayor';
+  end if;
+
+  v_budget_month := date_trunc('month', coalesce(p_target_month, current_date))::date;
+
+  insert into public.house_monthly_budgets (
+    house_id,
+    budget_month,
+    amount,
+    created_by_profile_id,
+    updated_by_profile_id
+  )
+  values (
+    v_house_id,
+    v_budget_month,
+    round(p_amount, 2),
+    auth.uid(),
+    auth.uid()
+  )
+  on conflict (house_id, budget_month)
+  do update set
+    amount = excluded.amount,
+    updated_by_profile_id = auth.uid(),
+    updated_at = now();
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'house_monthly_budget',
+    null,
+    'updated',
+    jsonb_build_object(
+      'budget_month', to_char(v_budget_month, 'YYYY-MM'),
+      'amount', round(p_amount, 2)
+    )
+  );
+
+  return jsonb_build_object(
+    'budget_month', to_char(v_budget_month, 'YYYY-MM'),
+    'budget_amount', round(p_amount, 2)
+  );
+end;
+$$;
+
+grant execute on function public.set_house_monthly_budget(text, numeric, date) to authenticated;
+
+create or replace function public.get_house_shopping_list(
+  p_house_public_code text
+)
+returns table (
+  item_id uuid,
+  text text,
+  is_checked boolean,
+  created_at timestamptz,
+  created_by_profile_id uuid,
+  created_by_name text,
+  checked_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  return query
+  select
+    hsli.id as item_id,
+    hsli.text,
+    hsli.is_checked,
+    hsli.created_at,
+    hsli.created_by_profile_id,
+    public.profile_display_name(hsli.created_by_profile_id) as created_by_name,
+    hsli.checked_at
+  from public.house_shopping_list_items hsli
+  where hsli.house_id = v_house_id
+  order by hsli.is_checked asc, hsli.created_at desc;
+end;
+$$;
+
+grant execute on function public.get_house_shopping_list(text) to authenticated;
+
+create or replace function public.add_house_shopping_list_item(
+  p_house_public_code text,
+  p_text text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_item_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if p_text is null or length(trim(p_text)) = 0 then
+    raise exception 'Debes escribir un artículo';
+  end if;
+
+  insert into public.house_shopping_list_items (
+    house_id,
+    text,
+    created_by_profile_id
+  )
+  values (
+    v_house_id,
+    trim(p_text),
+    auth.uid()
+  )
+  returning id into v_item_id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'shopping_list_item',
+    v_item_id,
+    'created',
+    jsonb_build_object('text', trim(p_text))
+  );
+
+  return jsonb_build_object('item_id', v_item_id);
+end;
+$$;
+
+grant execute on function public.add_house_shopping_list_item(text, text) to authenticated;
+
+create or replace function public.toggle_house_shopping_list_item(
+  p_house_public_code text,
+  p_item_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_item public.house_shopping_list_items%rowtype;
+  v_next_checked boolean;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  select *
+  into v_item
+  from public.house_shopping_list_items hsli
+  where hsli.id = p_item_id
+    and hsli.house_id = v_house_id
+  limit 1;
+
+  if v_item.id is null then
+    raise exception 'El artículo no existe';
+  end if;
+
+  v_next_checked := not v_item.is_checked;
+
+  update public.house_shopping_list_items
+  set
+    is_checked = v_next_checked,
+    checked_at = case when v_next_checked then now() else null end,
+    checked_by_profile_id = case when v_next_checked then auth.uid() else null end,
+    updated_at = now()
+  where id = v_item.id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'shopping_list_item',
+    v_item.id,
+    case when v_next_checked then 'checked' else 'unchecked' end,
+    jsonb_build_object(
+      'text', v_item.text,
+      'is_checked', v_next_checked
+    )
+  );
+
+  return jsonb_build_object(
+    'item_id', v_item.id,
+    'is_checked', v_next_checked
+  );
+end;
+$$;
+
+grant execute on function public.toggle_house_shopping_list_item(text, uuid) to authenticated;
+
+create or replace function public.delete_house_shopping_list_item(
+  p_house_public_code text,
+  p_item_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_item public.house_shopping_list_items%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  select *
+  into v_item
+  from public.house_shopping_list_items hsli
+  where hsli.id = p_item_id
+    and hsli.house_id = v_house_id
+  limit 1;
+
+  if v_item.id is null then
+    raise exception 'El artículo no existe';
+  end if;
+
+  delete from public.house_shopping_list_items
+  where id = v_item.id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'shopping_list_item',
+    v_item.id,
+    'deleted',
+    jsonb_build_object('text', v_item.text)
+  );
+
+  return jsonb_build_object('item_id', v_item.id);
+end;
+$$;
+
+grant execute on function public.delete_house_shopping_list_item(text, uuid) to authenticated;
+
+create or replace function public.clear_house_shopping_list(
+  p_house_public_code text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_deleted_count int;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  with deleted_rows as (
+    delete from public.house_shopping_list_items hsli
+    where hsli.house_id = v_house_id
+    returning hsli.id
+  )
+  select count(*)::int
+  into v_deleted_count
+  from deleted_rows;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'shopping_list',
+    null,
+    'cleared',
+    jsonb_build_object('deleted_count', coalesce(v_deleted_count, 0))
+  );
+
+  return jsonb_build_object('deleted_count', coalesce(v_deleted_count, 0));
+end;
+$$;
+
+grant execute on function public.clear_house_shopping_list(text) to authenticated;
 grant execute on function public.get_house_shared_expenses(text, int) to authenticated;
 grant execute on function public.get_house_payment_simplification(text) to authenticated;
 grant execute on function public.get_house_expenses_dashboard(text, int, int) to authenticated;
