@@ -9,9 +9,10 @@ import styles from "./ajustes-screen.module.css";
 type AjustesScreenProps = {
   houseCode: string;
   dashboardPath: string;
+  isAdmin: boolean;
 };
 
-export function AjustesScreen({ houseCode, dashboardPath }: AjustesScreenProps) {
+export function AjustesScreen({ houseCode, dashboardPath, isAdmin }: AjustesScreenProps) {
   const basePath = dashboardPath;
   const avatars = [
     "/images/IconoperfilM.webp",
@@ -150,6 +151,11 @@ export function AjustesScreen({ houseCode, dashboardPath }: AjustesScreenProps) 
                 Editar
               </button>
             </div>
+            {isAdmin ? (
+              <button type="button" className={styles.deleteParticipantButton}>
+                Eliminar participante
+              </button>
+            ) : null}
           </Card>
 
           <Card className={`${styles.block} ${styles.appBlock}`}>
