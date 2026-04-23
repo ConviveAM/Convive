@@ -427,6 +427,9 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         routeContext.house.public_code
       )
     : [];
+  const canReviewExpensePayments = pendingPaymentConfirmations.some(
+    (payment) => payment.can_review
+  );
   const openHousePurchaseTickets =
     sectionPath === "gastos"
       ? await loadOpenHousePurchaseTicketsWithClient(
@@ -481,11 +484,11 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
       <GastosScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
-        tickets={openHousePurchaseTickets}
-        sharedExpenses={openHouseSharedExpenses}
+        tickets={expensesDashboard?.tickets ?? openHousePurchaseTickets}
+        sharedExpenses={expensesDashboard?.shared_expenses ?? openHouseSharedExpenses}
         settlements={expensesDashboard?.settlements ?? []}
         pendingPaymentConfirmations={pendingPaymentConfirmations}
-        canReviewPayments={isHouseAdmin}
+        canReviewPayments={canReviewExpensePayments}
       />
       ,
       routeContext.dashboardPath,
@@ -515,7 +518,7 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         currentProfileId={routeContext.profile.id}
         currentUserExpenseStates={currentUserExpenseStates}
         pendingPaymentConfirmations={pendingPaymentConfirmations}
-        canReviewPayments={isHouseAdmin}
+        canReviewPayments={canReviewExpensePayments}
       />
       ,
       routeContext.dashboardPath,

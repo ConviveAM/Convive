@@ -106,6 +106,7 @@ export type PendingPaymentConfirmation = {
   payment_date: string;
   note: string | null;
   status: string;
+  can_review: boolean;
 };
 
 export type CurrentUserExpenseState = {

@@ -4288,6 +4288,14 @@ begin
    and ep.status = 'pending'
   where pt.house_id = v_house_id
     and pt.status = 'active'
+    and not exists (
+      select 1
+      from public.payments p
+      where p.house_id = v_house_id
+        and p.related_expense_id = se.id
+        and p.from_profile_id = auth.uid()
+        and p.status = 'pending'
+    )
   order by pt.purchase_date desc, pt.created_at desc
   limit greatest(p_limit, 1);
 end;
@@ -4360,6 +4368,14 @@ begin
   where se.house_id = v_house_id
     and se.status = 'active'
     and coalesce(se.settlement_status, 'open') <> 'settled'
+    and not exists (
+      select 1
+      from public.payments p
+      where p.house_id = v_house_id
+        and p.related_expense_id = se.id
+        and p.from_profile_id = auth.uid()
+        and p.status = 'pending'
+    )
   order by se.expense_date desc, se.created_at desc
   limit greatest(p_limit, 1);
 end;
