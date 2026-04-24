@@ -103,6 +103,12 @@
   flex-wrap: wrap;
 }
 
+.emptyInline {
+  margin: 0.75rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+}
+
 .memberItem {
   display: grid;
   justify-items: center;
@@ -159,19 +165,62 @@
   text-transform: uppercase;
 }
 
-.checkList {
-  margin-top: 0.45rem;
-  display: grid;
-  gap: 0.2rem;
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.checkList label {
+.clearListButton {
+  border: none;
+  background: transparent;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.clearListButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.shoppingList {
+  margin-top: 0.45rem;
+  display: grid;
+  gap: 0.28rem;
+  max-height: 142px;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.shoppingItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.shoppingLabel {
   display: inline-flex;
   align-items: center;
   gap: 0.36rem;
   font-family: "Poppins", sans-serif;
   font-size: 15px;
   color: #1f1a17;
+  min-width: 0;
+}
+
+.shoppingLabel span {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.shoppingTextChecked {
+  text-decoration: line-through;
+  opacity: 0.65;
 }
 
 .checkbox {
@@ -202,8 +251,36 @@
   font-size: 12px;
 }
 
+.addItemButton {
+  border: none;
+  background: transparent;
+  color: #8b1a2f;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.addItemButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .plusSmall {
   color: #8b1a2f;
+}
+
+.deleteItemButton {
+  border: none;
+  background: transparent;
+  color: #8b1a2f;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.deleteItemButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .moneyRows {
@@ -253,6 +330,28 @@
   height: 100%;
   background: #8b1a2f;
   transition: transform 300ms;
+}
+
+.budgetEditor {
+  margin-top: 0.65rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.budgetInput {
+  height: 30px;
+  border: 1px solid #8b1a2f;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0 0.5rem;
+  font-size: 12px;
+}
+
+.budgetSaveButton {
+  min-height: 30px;
+  padding: 0.2rem 0.65rem;
 }
 
 .maroonCard {
@@ -337,6 +436,12 @@
   align-items: center;
 }
 
+.compareEmpty {
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  color: #5a5652;
+}
+
 .compareLeft {
   display: grid;
   grid-template-columns: 20px 1fr;
@@ -380,6 +485,21 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
+}
+
+.feedbackMessage {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  color: #8b1a2f;
+  font-weight: 600;
+}
+
+.emptyState {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  color: #5a5652;
 }
 
 @media (max-width: 900px) {

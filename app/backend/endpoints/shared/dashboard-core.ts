@@ -27,7 +27,7 @@ import type {
   Settlement,
   SharedExpense,
 } from "./dashboard-types";
-import { createClient } from "../utils/supabase/server";
+import { createClient } from "./supabase-server";
 
 type ProfileRecord = {
   id: string;
@@ -814,6 +814,7 @@ export async function loadHouseExpensesDashboardWithClient(
           payment_date: toStringValue(payment.payment_date),
           note: toNullableStringValue(payment.note),
           status: toStringValue(payment.status),
+          can_review: payment.can_review === true,
         }) satisfies PendingPaymentConfirmation
     ),
   } satisfies ExpensesDashboardData;
@@ -1396,6 +1397,7 @@ export async function loadHousePendingPaymentConfirmationsWithClient(
         payment_date: toStringValue(payment.payment_date),
         note: toNullableStringValue(payment.note),
         status: toStringValue(payment.status),
+        can_review: payment.can_review === true,
       }) satisfies PendingPaymentConfirmation
   );
 }

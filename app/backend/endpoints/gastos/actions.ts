@@ -1,12 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
-import { getAuthenticatedProfileContext } from "../../lib/dashboard";
-
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+import { getAuthenticatedProfileContext } from "../auth/queries";
+import type { ActionResult } from "../shared/action-result";
+import { toActionError } from "../shared/action-result";
+import { revalidatePaths } from "../shared/revalidate";
 
 type CreatePendingTicketExpenseInput = {
   houseCode: string;
@@ -40,30 +37,19 @@ type AdminRejectPaymentInput = AdminReviewPaymentInput & {
   reason?: string;
 };
 
-function toActionError(error: unknown) {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return "Ha ocurrido un error inesperado.";
-}
-
 function revalidateExpensePaths(dashboardPath: string) {
-  const paths = [
+  revalidatePaths([
     dashboardPath,
     `${dashboardPath}/gastos`,
     `${dashboardPath}/gastos/anadir-ticket`,
     `${dashboardPath}/gastos/tickets`,
     `${dashboardPath}/gastos/division`,
+    `${dashboardPath}/gastos/validaciones`,
     `${dashboardPath}/gastos/simplificar`,
     `${dashboardPath}/gastos/simplificar/pago-simplificado`,
     `${dashboardPath}/area-personal`,
     `${dashboardPath}/area-personal/historial`,
-  ];
-
-  for (const path of paths) {
-    revalidatePath(path);
-  }
+  ]);
 }
 
 export async function createPendingTicketExpenseAction(

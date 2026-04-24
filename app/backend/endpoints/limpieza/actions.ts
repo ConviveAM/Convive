@@ -1,16 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
-import {
-  getAuthenticatedProfileContext,
-  loadHouseCleaningTaskHistoryWithClient,
-} from "../../lib/dashboard";
-import type { CleaningTask } from "../../lib/dashboard-types";
-
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+import { getAuthenticatedProfileContext } from "../auth/queries";
+import { loadHouseCleaningTaskHistoryWithClient } from "./queries";
+import type { ActionResult } from "../shared/action-result";
+import { toActionError } from "../shared/action-result";
+import { revalidatePaths } from "../shared/revalidate";
+import type { CleaningTask } from "../../../../lib/dashboard-types";
 
 type CreateCleaningTaskInput = {
   houseCode: string;
@@ -43,20 +38,8 @@ type LoadCleaningHistoryInput = {
   zoneName: string | null;
 };
 
-function toActionError(error: unknown) {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return "Ha ocurrido un error inesperado.";
-}
-
 function revalidateCleaningPaths(dashboardPath: string) {
-  const paths = [dashboardPath, `${dashboardPath}/limpieza`];
-
-  for (const path of paths) {
-    revalidatePath(path);
-  }
+  revalidatePaths([dashboardPath, `${dashboardPath}/limpieza`]);
 }
 
 export async function createCleaningTaskAction(

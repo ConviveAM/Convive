@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { MouseEvent } from "react";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { signOutAction } from "../../app/actions/auth-actions";
+import { signOutAction } from "../../app/backend/endpoints/auth/actions";
 import styles from "./electrical-menu.module.css";
 
 type ElectricalMenuProps = {

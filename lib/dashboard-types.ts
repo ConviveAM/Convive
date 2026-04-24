@@ -106,6 +106,7 @@ export type PendingPaymentConfirmation = {
   payment_date: string;
   note: string | null;
   status: string;
+  can_review: boolean;
 };
 
 export type CurrentUserExpenseState = {
@@ -226,4 +227,61 @@ export type PersonalAreaDashboardData = {
   history: PersonalAreaHistoryItem[];
   calendar_events: PersonalAreaCalendarEvent[];
   chart: PersonalAreaChartItem[];
+};
+
+export type HouseMemberSummary = {
+  profile_id: string;
+  display_name: string;
+  role: string;
+  avatar_url: string | null;
+};
+
+export type HouseShoppingListItem = {
+  item_id: string;
+  text: string;
+  is_checked: boolean;
+  created_at: string;
+  created_by_profile_id: string | null;
+  created_by_name: string | null;
+  checked_at: string | null;
+};
+
+export type SharedFundsSummary = {
+  budget_month: string;
+  budget_amount: number | string;
+  spent_amount: number | string;
+  can_edit_budget: boolean;
+};
+
+export type MonthlyExpensesPoint = {
+  month_key: string;
+  month_label: string;
+  total_amount: number | string;
+  is_current_month: boolean;
+};
+
+export type GroupExpenseDistributionItem = {
+  name: string;
+  amount: number | string;
+};
+
+export type GroupExpenseComparisonItem = {
+  name: string;
+  current_amount: number | string;
+  previous_amount: number | string;
+  percent_change: number | null;
+};
+
+export type AreaGrupalDashboardData = {
+  members: HouseMemberSummary[];
+  shopping_list: HouseShoppingListItem[];
+  shared_funds: SharedFundsSummary;
+  monthly_expenses: {
+    current_total: number | string;
+    previous_total: number | string;
+    percent_change: number | null;
+    series: MonthlyExpensesPoint[];
+  };
+  distribution: GroupExpenseDistributionItem[];
+  comparisons: GroupExpenseComparisonItem[];
 };

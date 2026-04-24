@@ -17,13 +17,13 @@ import {
   createCleaningTaskAction,
   loadCleaningTaskHistoryAction,
   rotateCleaningTasksAction,
-} from "../../app/actions/cleaning-actions";
+} from "../../app/backend/endpoints/limpieza/actions";
 import type {
   AddCleaningTaskFormOptions,
   CleaningTask,
   CleaningZoneSection,
 } from "../../lib/dashboard-types";
-import { createClient as createSupabaseClient } from "../../utils/supabase/client";
+import { createSupabaseBrowserClient } from "../../lib/supabase-browser";
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
 import { Card } from "../ui/card";
@@ -214,7 +214,7 @@ export function LimpiezaScreen({
   const floorWrapRef = useRef<HTMLDivElement | null>(null);
   const floorObjectRef = useRef<HTMLObjectElement | null>(null);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const supabase = useMemo(() => createSupabaseClient(), []);
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const hasMembers = formOptions.members.length > 0;
   const pendingTasksByZone = useMemo(() => {

@@ -2,8 +2,8 @@ import { FacturasAddScreen } from "../../../../../../components/facturas/factura
 import { MiniDoorLink } from "../../../../../../components/ui/mini-door-link";
 import {
   getAccessibleHouseContext,
-  loadAddInvoiceFormOptionsWithClient,
-} from "../../../../../../lib/dashboard";
+} from "../../../../../backend/endpoints/auth/queries";
+import { loadAddInvoiceFormOptionsWithClient } from "../../../../../backend/endpoints/facturas/queries";
 
 type FacturasAddPageProps = {
   params: Promise<{

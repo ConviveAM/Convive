@@ -19,6 +19,7 @@ import { GastosPagoSimplificadoScreen } from "../../../../../components/gastos/g
 import { GastosScreen } from "../../../../../components/gastos/gastos-screen";
 import { GastosSimplificarScreen } from "../../../../../components/gastos/gastos-simplificar-screen";
 import { GastosTicketsScreen } from "../../../../../components/gastos/gastos-tickets-screen";
+import { GastosValidacionesScreen } from "../../../../../components/gastos/gastos-validaciones-screen";
 import { HerramientasEntraScreen } from "../../../../../components/herramientas/herramientas-entra-screen";
 import { HerramientasScreen } from "../../../../../components/herramientas/herramientas-screen";
 import { HomeBoard } from "../../../../../components/home/home-board";
@@ -27,22 +28,32 @@ import { ElectricalMenu } from "../../../../../components/menu/electrical-menu";
 import { MiniDoorLink, type MenuKey } from "../../../../../components/ui/mini-door-link";
 import {
   getAccessibleHouseContext,
+} from "../../../../backend/endpoints/auth/queries";
+import {
   loadActiveHouseInviteWithClient,
-  loadAddExpenseFormOptionsWithClient,
+  loadAreaGrupalDashboardWithClient,
+} from "../../../../backend/endpoints/area-grupal/queries";
+import { loadPersonalAreaDashboardWithClient } from "../../../../backend/endpoints/area-personal/queries";
+import { loadCalendarScreenData } from "../../../../backend/endpoints/calendario/queries";
+import {
+  loadAddInvoiceFormOptionsWithClient,
   loadHouseInvoiceHistoryWithClient,
   loadHouseInvoicesDashboardWithClient,
-  loadAddCleaningTaskFormOptionsWithClient,
-  loadHouseCleaningDashboardWithClient,
-  loadCurrentUserExpenseStatesWithClient,
+} from "../../../../backend/endpoints/facturas/queries";
+import {
+  loadAddExpenseFormOptionsWithClient,
   loadHouseExpensesDashboardWithClient,
   loadHousePendingPaymentConfirmationsWithClient,
   loadHousePurchaseTicketsHistoryWithClient,
+  loadHouseSharedExpensesHistoryWithClient,
   loadOpenHousePurchaseTicketsWithClient,
   loadOpenHouseSharedExpensesWithClient,
-  loadHouseSharedExpensesHistoryWithClient,
-  loadHouseMemberCountWithClient,
-  loadPersonalAreaDashboardWithClient,
-} from "../../../../../lib/dashboard";
+} from "../../../../backend/endpoints/gastos/queries";
+import { loadHomeDashboardWithClient } from "../../../../backend/endpoints/home/queries";
+import {
+  loadAddCleaningTaskFormOptionsWithClient,
+  loadHouseCleaningDashboardWithClient,
+} from "../../../../backend/endpoints/limpieza/queries";
 
 type HouseRoutePageProps = {
   params: Promise<{
@@ -78,17 +89,22 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
     routeContext.house.created_by === routeContext.profile.id;
 
   if (!sectionPath) {
-    const memberCount = await loadHouseMemberCountWithClient(
+    const homeDashboard = await loadHomeDashboardWithClient(
       routeContext.supabase,
-      routeContext.house.public_code
+      routeContext.house.public_code,
+      routeContext.profile.id
     );
 
     return (
       <HomeBoard
         houseCode={routeContext.house.public_code}
         houseName={routeContext.house.name}
-        memberCount={memberCount}
+        memberCount={homeDashboard.memberCount}
         dashboardPath={routeContext.dashboardPath}
+        monthlyPayments={homeDashboard.monthlyPayments}
+        nextPayment={homeDashboard.nextPayment}
+        debtSummary={homeDashboard.debtSummary}
+        recentActivity={homeDashboard.recentActivity}
       />
     );
   }
@@ -141,10 +157,16 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   }
 
   if (sectionPath === "area-grupal") {
-    const houseInvite = await loadActiveHouseInviteWithClient(
-      routeContext.supabase,
-      routeContext.house.public_code
-    );
+    const [houseInvite, groupDashboard] = await Promise.all([
+      loadActiveHouseInviteWithClient(
+        routeContext.supabase,
+        routeContext.house.public_code
+      ),
+      loadAreaGrupalDashboardWithClient(
+        routeContext.supabase,
+        routeContext.house.public_code
+      ),
+    ]);
 
     return withMiniDoor(
       <AreaGrupalScreen
@@ -152,6 +174,7 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         dashboardPath={routeContext.dashboardPath}
         inviteCode={houseInvite.inviteCode}
         canManageInvites={houseInvite.canManageInvites}
+        data={groupDashboard}
       />,
       routeContext.dashboardPath,
       "area-grupal"
@@ -159,51 +182,20 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
   }
 
   if (sectionPath === "calendario") {
-    const [
-      ticketsHistory,
-      sharedExpensesHistory,
-      invoicesHistory,
-      cleaningDashboard,
-      pendingPaymentConfirmations,
-    ] = await Promise.all([
-      loadHousePurchaseTicketsHistoryWithClient(
-        routeContext.supabase,
-        routeContext.house.public_code,
-        200,
-        0
-      ),
-      loadHouseSharedExpensesHistoryWithClient(
-        routeContext.supabase,
-        routeContext.house.public_code,
-        200,
-        0
-      ),
-      loadHouseInvoiceHistoryWithClient(
-        routeContext.supabase,
-        routeContext.house.public_code,
-        200,
-        0
-      ),
-      loadHouseCleaningDashboardWithClient(
-        routeContext.supabase,
-        routeContext.house.public_code,
-        200
-      ),
-      loadHousePendingPaymentConfirmationsWithClient(
-        routeContext.supabase,
-        routeContext.house.public_code
-      ),
-    ]);
+    const calendarData = await loadCalendarScreenData(
+      routeContext.supabase,
+      routeContext.house.public_code
+    );
 
     return withMiniDoor(
       <CalendarioScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
-        tickets={ticketsHistory}
-        sharedExpenses={sharedExpensesHistory}
-        invoices={invoicesHistory}
-        cleaningTasks={cleaningDashboard.zones.flatMap((zone) => zone.tasks)}
-        pendingPayments={pendingPaymentConfirmations}
+        tickets={calendarData.tickets}
+        sharedExpenses={calendarData.sharedExpenses}
+        invoices={calendarData.invoices}
+        cleaningTasks={calendarData.cleaningTasks}
+        pendingPayments={calendarData.pendingPayments}
       />,
       routeContext.dashboardPath,
       "calendario"
@@ -422,12 +414,18 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         50
       )
     : null;
-  const pendingPaymentConfirmations = sectionPath === "gastos" || sectionPath === "gastos/division"
+  const pendingPaymentConfirmations =
+    sectionPath === "gastos" ||
+    sectionPath === "gastos/division" ||
+    sectionPath === "gastos/validaciones"
     ? await loadHousePendingPaymentConfirmationsWithClient(
         routeContext.supabase,
         routeContext.house.public_code
       )
     : [];
+  const canReviewExpensePayments = pendingPaymentConfirmations.some(
+    (payment) => payment.can_review
+  );
   const openHousePurchaseTickets =
     sectionPath === "gastos"
       ? await loadOpenHousePurchaseTicketsWithClient(
@@ -462,13 +460,6 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
           0
         )
       : [];
-  const currentUserExpenseStates =
-    sectionPath === "gastos/division"
-      ? await loadCurrentUserExpenseStatesWithClient(routeContext.supabase, {
-          houseCode: routeContext.house.public_code,
-          expenseIds: sharedExpensesHistory.map((expense) => expense.expense_id),
-        })
-      : [];
   const addExpenseFormOptions =
     sectionPath === "gastos/anadir-ticket"
       ? await loadAddExpenseFormOptionsWithClient(
@@ -482,11 +473,11 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
       <GastosScreen
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
-        tickets={openHousePurchaseTickets}
-        sharedExpenses={openHouseSharedExpenses}
+        tickets={expensesDashboard?.tickets ?? openHousePurchaseTickets}
+        sharedExpenses={expensesDashboard?.shared_expenses ?? openHouseSharedExpenses}
         settlements={expensesDashboard?.settlements ?? []}
         pendingPaymentConfirmations={pendingPaymentConfirmations}
-        canReviewPayments={isHouseAdmin}
+        canReviewPayments={canReviewExpensePayments}
       />
       ,
       routeContext.dashboardPath,
@@ -513,12 +504,20 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
         sharedExpenses={sharedExpensesHistory}
-        currentProfileId={routeContext.profile.id}
-        currentUserExpenseStates={currentUserExpenseStates}
-        pendingPaymentConfirmations={pendingPaymentConfirmations}
-        canReviewPayments={isHouseAdmin}
       />
       ,
+      routeContext.dashboardPath,
+      "gastos"
+    );
+  }
+
+  if (sectionPath === "gastos/validaciones") {
+    return withMiniDoor(
+      <GastosValidacionesScreen
+        houseCode={routeContext.house.public_code}
+        dashboardPath={routeContext.dashboardPath}
+        pendingPaymentConfirmations={pendingPaymentConfirmations}
+      />,
       routeContext.dashboardPath,
       "gastos"
     );

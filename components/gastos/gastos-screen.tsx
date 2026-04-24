@@ -288,8 +288,7 @@ export function GastosScreen({
             </div>
           </Card>
 
-          {canReviewPayments ? (
-            <Card className={styles.simpleCard}>
+          <Card className={styles.simpleCard}>
               <div className={`${styles.sectionTop} ${styles.simpleTop}`}>
                 <div>
                   <h2 className={styles.simpleTitle}>Validaciones</h2>
@@ -298,7 +297,7 @@ export function GastosScreen({
                   </p>
                 </div>
                 <Link
-                  href={`${basePath}/gastos/division`}
+                  href={`${basePath}/gastos/validaciones`}
                   className={`${styles.viewAll} ${styles.viewAllRed}`}
                 >
                   <span className={styles.viewAllContent}>
@@ -357,7 +356,6 @@ export function GastosScreen({
                 )}
               </div>
             </Card>
-          ) : null}
         </div>
       </section>
     </main>
