@@ -18,7 +18,6 @@ export type MenuKey =
   | "limpieza"
   | "herramientas"
   | "ajustes"
-  | "notificaciones"
   | "cerrar-sesion";
 
 type MiniDoorLinkProps = {
@@ -42,8 +41,7 @@ const MENU_ITEMS: Array<{
   { key: "limpieza", label: "Limpieza", index: "07", href: "limpieza" },
   { key: "herramientas", label: "Herramientas", index: "08", href: "herramientas" },
   { key: "ajustes", label: "Ajustes", index: "09", href: "ajustes" },
-  { key: "notificaciones", label: "Notificaciones", index: "10", href: "notificaciones" },
-  { key: "cerrar-sesion", label: "Cerrar sesión", index: "11", href: "menu" },
+  { key: "cerrar-sesion", label: "Cerrar sesión", index: "10", href: "menu" },
 ];
 
 export function MiniDoorLink({

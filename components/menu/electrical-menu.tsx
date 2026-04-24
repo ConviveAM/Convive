@@ -95,7 +95,6 @@ export function ElectricalMenu({
       title: "Configuración",
       items: [
         { code: "09", label: "Ajustes", href: `${basePath}/ajustes` },
-        { code: "10", label: "Notificaciones", href: `${basePath}/notificaciones` },
       ],
     },
   ];

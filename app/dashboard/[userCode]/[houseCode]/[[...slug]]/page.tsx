@@ -110,7 +110,7 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
     );
   }
 
-  if (sectionPath === "menu" || sectionPath === "notificaciones") {
+  if (sectionPath === "menu") {
     return (
       <ElectricalMenu
         houseCode={routeContext.house.public_code}
