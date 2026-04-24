@@ -247,11 +247,31 @@
   line-height: 1.2;
 }
 
+.myShareLine {
+  margin: 0.22rem 0 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
 .stateBadge {
   color: #8b1a2f;
   font-family: "Poppins", sans-serif;
   font-size: 13px;
   font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.stateBadgeMuted {
+  color: #6f6863;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .pendingSection {

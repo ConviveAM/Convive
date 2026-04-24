@@ -504,6 +504,8 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
         sharedExpenses={sharedExpensesHistory}
+        pendingPaymentConfirmations={pendingPaymentConfirmations}
+        currentProfileId={routeContext.profile.id}
       />
       ,
       routeContext.dashboardPath,

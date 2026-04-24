@@ -2,14 +2,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 
-import type { SharedExpense } from "../../lib/dashboard-types";
+import { requestExpensePaymentConfirmationAction } from "../../app/backend/endpoints/gastos/actions";
+import type {
+  PendingPaymentConfirmation,
+  SharedExpense,
+} from "../../lib/dashboard-types";
 import {
   formatCurrency,
   formatMonthLabel,
   formatShortDate,
 } from "../../lib/dashboard-presenters";
+import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import styles from "./gastos-division-screen.module.css";
 
@@ -17,6 +23,8 @@ type GastosDivisionScreenProps = {
   houseCode: string;
   dashboardPath: string;
   sharedExpenses?: SharedExpense[];
+  pendingPaymentConfirmations?: PendingPaymentConfirmation[];
+  currentProfileId?: string;
 };
 
 function matchesSearch(expense: SharedExpense, searchTerm: string) {
@@ -45,13 +53,50 @@ function formatSettlementStatus(status: string | null) {
 }
 
 export function GastosDivisionScreen({
-  houseCode: _houseCode,
+  houseCode,
   dashboardPath,
   sharedExpenses = [],
+  pendingPaymentConfirmations = [],
+  currentProfileId,
 }: GastosDivisionScreenProps) {
+  const router = useRouter();
   const [searchValue, setSearchValue] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [activeExpenseId, setActiveExpenseId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const basePath = dashboardPath;
   const normalizedSearchValue = searchValue.trim().toLowerCase();
+
+  const getCurrentUserPendingPayment = (expense: SharedExpense) =>
+    pendingPaymentConfirmations.find(
+      (payment) =>
+        payment.expense_id === expense.expense_id &&
+        payment.from_profile_id === currentProfileId &&
+        payment.status === "pending"
+    );
+
+  const handleRequestPaymentConfirmation = (expense: SharedExpense) => {
+    setFeedbackMessage(null);
+    setActiveExpenseId(expense.expense_id);
+
+    startTransition(async () => {
+      const result = await requestExpensePaymentConfirmationAction({
+        houseCode,
+        dashboardPath: basePath,
+        expenseId: expense.expense_id,
+        note: "Confirmacion enviada desde Division de gastos.",
+      });
+
+      if (result.success) {
+        setFeedbackMessage("Confirmacion enviada. Ya aparece en Validaciones.");
+        router.refresh();
+      } else if ("error" in result) {
+        setFeedbackMessage(result.error);
+      }
+
+      setActiveExpenseId(null);
+    });
+  };
 
   const groupedExpenses = sharedExpenses
     .filter((expense) =>
@@ -120,42 +165,101 @@ export function GastosDivisionScreen({
               </div>
             </div>
 
+            {feedbackMessage ? (
+              <p className={styles.feedbackMessage}>{feedbackMessage}</p>
+            ) : null}
+
             <div className={styles.listWrap}>
               {groupedExpenses.length ? (
                 groupedExpenses.map((group) => (
                   <section key={group.month} className={styles.monthBlock}>
                     <h3 className={styles.monthTitle}>{group.month}</h3>
                     <div className={styles.monthRows}>
-                      {group.rows.map((expense) => (
-                        <div key={expense.expense_id} className={styles.row}>
-                          <div className={styles.left}>
-                            <Image
-                              src="/iconos/building-2-svgrepo-com 1.svg"
-                              alt=""
-                              width={20}
-                              height={20}
-                            />
-                            <div>
-                              <p className={styles.main}>{expense.title}</p>
-                              <p className={styles.sub}>
-                                {formatShortDate(expense.expense_date)} - Pago{" "}
-                                {expense.paid_by_name}
-                              </p>
-                              <p className={styles.meta}>
-                                Participantes:{" "}
-                                {expense.participants_text || "Sin participantes"}
-                              </p>
-                              <p className={styles.statusLine}>
-                                Estado general:{" "}
-                                {formatSettlementStatus(expense.settlement_status)}
-                              </p>
+                      {group.rows.map((expense) => {
+                        const pendingPayment =
+                          getCurrentUserPendingPayment(expense);
+                        const isParticipant = expense.my_share_amount != null;
+                        const isMySharePaid = expense.my_status === "paid";
+                        const canRequestPayment =
+                          Boolean(currentProfileId) &&
+                          isParticipant &&
+                          expense.my_status === "pending" &&
+                          !pendingPayment;
+                        const isActive = activeExpenseId === expense.expense_id;
+
+                        return (
+                          <div key={expense.expense_id} className={styles.row}>
+                            <div className={styles.left}>
+                              <Image
+                                src="/iconos/building-2-svgrepo-com 1.svg"
+                                alt=""
+                                width={20}
+                                height={20}
+                              />
+                              <div>
+                                <p className={styles.main}>{expense.title}</p>
+                                <p className={styles.sub}>
+                                  {formatShortDate(expense.expense_date)} - Pago{" "}
+                                  {expense.paid_by_name}
+                                </p>
+                                <p className={styles.meta}>
+                                  Participantes:{" "}
+                                  {expense.participants_text || "Sin participantes"}
+                                </p>
+                                <p className={styles.statusLine}>
+                                  Estado general:{" "}
+                                  {formatSettlementStatus(
+                                    expense.settlement_status
+                                  )}
+                                </p>
+                                {isParticipant ? (
+                                  <p className={styles.myShareLine}>
+                                    Tu parte:{" "}
+                                    {formatCurrency(
+                                      expense.my_share_amount ?? 0,
+                                      expense.currency
+                                    )}
+                                    {pendingPayment
+                                      ? " - pendiente de revision"
+                                      : isMySharePaid
+                                        ? " - confirmada"
+                                        : " - pendiente"}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
+                            <p className={styles.amount}>
+                              {formatCurrency(
+                                expense.total_amount,
+                                expense.currency
+                              )}
+                            </p>
+                            {canRequestPayment ? (
+                              <Button
+                                className={styles.button}
+                                onClick={() =>
+                                  handleRequestPaymentConfirmation(expense)
+                                }
+                                disabled={isPending}
+                              >
+                                {isActive ? "Enviando" : "He pagado"}
+                              </Button>
+                            ) : isParticipant ? (
+                              <span className={styles.stateBadge}>
+                                {pendingPayment
+                                  ? "En revision"
+                                  : isMySharePaid
+                                    ? "Pagado"
+                                    : "Pendiente"}
+                              </span>
+                            ) : (
+                              <span className={styles.stateBadgeMuted}>
+                                Global
+                              </span>
+                            )}
                           </div>
-                          <p className={styles.amount}>
-                            {formatCurrency(expense.total_amount, expense.currency)}
-                          </p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </section>
                 ))
