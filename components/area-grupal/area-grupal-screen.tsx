@@ -24,8 +24,20 @@ import {
   toggleShoppingListItemAction,
   updateMonthlyBudgetAction,
 } from "../../app/backend/endpoints/area-grupal/actions";
+import { removeHouseMemberAction } from "../../app/backend/endpoints/auth/actions";
 import { formatCurrency } from "../../lib/dashboard-presenters";
 import type { AreaGrupalDashboardData } from "../../lib/dashboard-types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
@@ -91,6 +103,7 @@ export function AreaGrupalScreen({
     String(toNumber(data.shared_funds.budget_amount))
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const basePath = dashboardPath ?? `/dashboard/${houseCode}`;
   const inviteHref = inviteCode
@@ -109,6 +122,7 @@ export function AreaGrupalScreen({
 
   const runAction = (action: () => Promise<void>) => {
     setErrorMessage(null);
+    setSuccessMessage(null);
     startTransition(async () => {
       await action();
     });
@@ -222,6 +236,26 @@ export function AreaGrupalScreen({
     });
   };
 
+  const handleRemoveParticipant = (profileId: string, displayName: string) => {
+    runAction(async () => {
+      const result = await removeHouseMemberAction({
+        houseCode,
+        dashboardPath: basePath,
+        profileId,
+      });
+
+      if (result.success) {
+        setSuccessMessage(`${displayName} eliminado del piso.`);
+        router.refresh();
+        return;
+      }
+
+      if ("error" in result) {
+        setErrorMessage(result.error);
+      }
+    });
+  };
+
   return (
     <main className={styles.page}>
       <section className={styles.panel}>
@@ -257,6 +291,38 @@ export function AreaGrupalScreen({
                         height={28}
                       />
                       <span>{member.display_name}</span>
+                      {canManageInvites ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button
+                              type="button"
+                              className={styles.memberDeleteButton}
+                              disabled={isPending}
+                            >
+                              Eliminar
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Eliminar participante</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción sacará a {member.display_name} del piso sin borrar
+                                su historial. ¿Quieres continuar?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() =>
+                                  handleRemoveParticipant(member.profile_id, member.display_name)
+                                }
+                              >
+                                Eliminar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : null}
                     </div>
                   ))
                 ) : (
@@ -285,6 +351,7 @@ export function AreaGrupalScreen({
           </Card>
 
           {errorMessage ? <p className={styles.feedbackMessage}>{errorMessage}</p> : null}
+          {successMessage ? <p className={styles.successMessage}>{successMessage}</p> : null}
 
           <div className={styles.gridTwo}>
             <Card className={`${styles.whiteCard} ${styles.shoppingCard}`}>

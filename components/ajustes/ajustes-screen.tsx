@@ -6,23 +6,11 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import {
-  removeHouseMemberAction,
   updateHouseMemberSettingsAction,
   updateProfileSettingsAction,
 } from "../../app/backend/endpoints/auth/actions";
 import type { ProfileSettingsData } from "../../lib/dashboard-types";
 import { Card } from "../ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "../ui/alert-dialog";
 import styles from "./ajustes-screen.module.css";
 
 type AjustesScreenProps = {
@@ -81,9 +69,6 @@ export function AjustesScreen({
   const [stayEndDate, setStayEndDate] = useState(
     settings.house_member.stay_end_date ?? ""
   );
-  const [removeProfileId, setRemoveProfileId] = useState(
-    settings.removable_members[0]?.profile_id ?? settings.profile.id
-  );
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const visibleCount = 3;
@@ -134,24 +119,6 @@ export function AjustesScreen({
 
       if (result.success) {
         setFeedbackMessage("Configuración del piso guardada.");
-        router.refresh();
-      } else if ("error" in result) {
-        setFeedbackMessage(result.error);
-      }
-    });
-  };
-
-  const handleRemoveParticipant = () => {
-    setFeedbackMessage(null);
-    startTransition(async () => {
-      const result = await removeHouseMemberAction({
-        houseCode,
-        dashboardPath: basePath,
-        profileId: removeProfileId,
-      });
-
-      if (result.success) {
-        setFeedbackMessage("Participante eliminado del piso.");
         router.refresh();
       } else if ("error" in result) {
         setFeedbackMessage(result.error);
@@ -347,41 +314,6 @@ export function AjustesScreen({
             >
               Guardar configuración
             </button>
-            {isAdmin && settings.can_remove_members ? (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <button type="button" className={styles.deleteParticipantButton}>
-                    Eliminar participante
-                  </button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Eliminar participante</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta acción sacará al participante del piso sin borrar su
-                      historial. ¿Quieres continuar?
-                    </AlertDialogDescription>
-                    <select
-                      className={styles.memberSelect}
-                      value={removeProfileId}
-                      onChange={(event) => setRemoveProfileId(event.target.value)}
-                    >
-                      {settings.removable_members.map((member) => (
-                        <option key={member.profile_id} value={member.profile_id}>
-                          {member.display_name}
-                        </option>
-                      ))}
-                    </select>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleRemoveParticipant}>
-                      Eliminar
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            ) : null}
             {feedbackMessage ? (
               <p className={styles.feedbackMessage}>{feedbackMessage}</p>
             ) : null}
