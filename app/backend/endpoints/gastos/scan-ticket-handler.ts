@@ -1,8 +1,11 @@
 import Groq from "groq-sdk";
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 
 import type { TicketScannerData } from "../../../../lib/ticket-scanner-types";
+import {
+  DOCUMENT_MAX_FILE_SIZE_BYTES,
+  SCANNER_ALLOWED_MEDIA_TYPES,
+} from "../../../../lib/ticket-scanner-types";
 
 type ScanTicketPayload = {
   text?: string;
@@ -23,26 +26,6 @@ function getGroqClient() {
   return new Groq({ apiKey });
 }
 
-function getStorageClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    return null;
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
-}
-
-function getPublicStorageBaseUrl() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!supabaseUrl) {
-    return null;
-  }
-
-  return `${supabaseUrl}/storage/v1/object/public`;
-}
-
 function isGroqInvalidApiKeyError(error: unknown) {
   if (!error || typeof error !== "object") {
     return false;
@@ -57,28 +40,6 @@ function isGroqInvalidApiKeyError(error: unknown) {
     payload.status === 401 ||
     payload.error?.error?.code === "invalid_api_key"
   );
-}
-
-function toSafeFileExtension(fileName?: string, mediaType?: string) {
-  const extByMediaType: Record<string, string> = {
-    "image/jpeg": "jpg",
-    "image/jpg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-    "application/pdf": "pdf",
-  };
-
-  const fromMediaType = mediaType ? extByMediaType[mediaType] : undefined;
-  if (fromMediaType) {
-    return fromMediaType;
-  }
-
-  const rawExtension = fileName?.split(".").pop()?.trim().toLowerCase();
-  if (!rawExtension) {
-    return "jpg";
-  }
-
-  return rawExtension.replace(/[^a-z0-9]/g, "") || "jpg";
 }
 
 function extractJsonObject(raw: string): TicketScannerData {
@@ -148,38 +109,6 @@ function expandTicketItemsByUnits(data: TicketScannerData): TicketScannerData {
   };
 }
 
-async function uploadOriginalFile(
-  fileBase64: string,
-  mediaType: string,
-  fileName?: string
-) {
-  const storageClient = getStorageClient();
-  const publicStorageBaseUrl = getPublicStorageBaseUrl();
-
-  if (!storageClient || !publicStorageBaseUrl) {
-    return null;
-  }
-
-  const extension = toSafeFileExtension(fileName, mediaType);
-  const randomSlug = Math.random().toString(36).slice(2, 10);
-  const filePath = `tickets/${Date.now()}-${randomSlug}.${extension}`;
-  const fileBuffer = Buffer.from(fileBase64, "base64");
-
-  const { error } = await storageClient.storage
-    .from("tickets")
-    .upload(filePath, fileBuffer, {
-      contentType: mediaType,
-      upsert: false,
-    });
-
-  if (error) {
-    console.error("Error subiendo imagen a Storage:", error);
-    return null;
-  }
-
-  return `${publicStorageBaseUrl}/tickets/${filePath}`;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const groqClient = getGroqClient();
@@ -194,7 +123,7 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = (await req.json()) as ScanTicketPayload;
-    const { text, fileBase64, mediaType, fileName } = payload;
+    const { text, fileBase64, mediaType } = payload;
     const scanMode = payload.scanMode === "vision" ? "vision" : "ocr";
 
     if (!fileBase64 || !mediaType) {
@@ -204,8 +133,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const shouldUseVisionDirect =
-      scanMode === "vision" && mediaType !== "application/pdf";
+    if (!(SCANNER_ALLOWED_MEDIA_TYPES as readonly string[]).includes(mediaType)) {
+      return Response.json(
+        { success: false, error: "Formato no permitido. Usa JPG, PNG o WEBP." },
+        { status: 400 }
+      );
+    }
+
+    const fileSize = Buffer.byteLength(fileBase64, "base64");
+    if (fileSize <= 0 || fileSize > DOCUMENT_MAX_FILE_SIZE_BYTES) {
+      return Response.json(
+        { success: false, error: "El archivo es demasiado grande. Maximo 10MB." },
+        { status: 400 }
+      );
+    }
+
+    const shouldUseVisionDirect = scanMode === "vision";
     if (!shouldUseVisionDirect && (!text || text.trim().length < 5)) {
       return Response.json(
         { success: false, error: "Falta texto OCR para procesar el documento." },
@@ -303,14 +246,9 @@ ${text}
     }
     data = expandTicketItemsByUnits(data);
 
-    const imageUrl = await uploadOriginalFile(fileBase64, mediaType, fileName);
-
     return Response.json({
       success: true,
-      data: {
-        ...data,
-        imagen_url: imageUrl,
-      } satisfies TicketScannerData,
+      data: data satisfies TicketScannerData,
     });
   } catch (error) {
     console.error("Error en scan-ticket:", error);

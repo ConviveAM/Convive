@@ -6811,3 +6811,707 @@ end;
 $$;
 
 grant execute on function public.remove_house_member(text, uuid) to authenticated;
+
+
+-- =========================================================
+-- CONVIVE - DOCUMENTOS PRIVADOS DE TICKETS Y FACTURAS
+-- Supabase Storage privado + paths en base de datos + signed URLs temporales
+-- Ejecutar este bloque al final, sin borrar los bloques anteriores.
+-- =========================================================
+
+-- 1) Bucket privado recomendado: convive-documents
+-- Se crea por SQL para evitar depender de codigo runtime de la app.
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'convive-documents',
+  'convive-documents',
+  false,
+  10485760,
+  array['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+)
+on conflict (id) do update
+set
+  public = false,
+  file_size_limit = 10485760,
+  allowed_mime_types = array['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+
+-- 2) Helper seguro para extraer house_id desde paths:
+-- house/{house_id}/expenses/{expense_id}/ticket/{file}
+-- house/{house_id}/invoices/{expense_id}/invoice/{file}
+create or replace function public.storage_path_house_id(p_name text)
+returns uuid
+language plpgsql
+stable
+set search_path = public
+as $$
+begin
+  if split_part(p_name, '/', 1) <> 'house' then
+    return null;
+  end if;
+
+  return split_part(p_name, '/', 2)::uuid;
+exception
+  when invalid_text_representation then
+    return null;
+end;
+$$;
+
+
+-- 3) Politicas RLS para Storage.
+-- El bucket es privado. La app solo crea signed URLs temporales desde backend.
+drop policy if exists "convive_documents_select_if_house_member" on storage.objects;
+create policy "convive_documents_select_if_house_member"
+on storage.objects
+for select
+to authenticated
+using (
+  bucket_id = 'convive-documents'
+  and (
+    public.is_house_member(public.storage_path_house_id(name))
+    or public.is_house_creator(public.storage_path_house_id(name))
+  )
+);
+
+drop policy if exists "convive_documents_insert_if_house_member" on storage.objects;
+create policy "convive_documents_insert_if_house_member"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'convive-documents'
+  and (
+    public.is_house_member(public.storage_path_house_id(name))
+    or public.is_house_creator(public.storage_path_house_id(name))
+  )
+);
+
+drop policy if exists "convive_documents_update_if_house_member" on storage.objects;
+create policy "convive_documents_update_if_house_member"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'convive-documents'
+  and (
+    owner = auth.uid()
+    or public.is_house_admin(public.storage_path_house_id(name))
+  )
+  and (
+    public.is_house_member(public.storage_path_house_id(name))
+    or public.is_house_creator(public.storage_path_house_id(name))
+  )
+)
+with check (
+  bucket_id = 'convive-documents'
+  and (
+    owner = auth.uid()
+    or public.is_house_admin(public.storage_path_house_id(name))
+  )
+  and (
+    public.is_house_member(public.storage_path_house_id(name))
+    or public.is_house_creator(public.storage_path_house_id(name))
+  )
+);
+
+drop policy if exists "convive_documents_delete_if_house_member" on storage.objects;
+create policy "convive_documents_delete_if_house_member"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'convive-documents'
+  and (
+    owner = auth.uid()
+    or public.is_house_admin(public.storage_path_house_id(name))
+  )
+  and (
+    public.is_house_member(public.storage_path_house_id(name))
+    or public.is_house_creator(public.storage_path_house_id(name))
+  )
+);
+
+
+-- 4) Asegurar columnas de paths existentes/reutilizadas.
+alter table public.purchase_tickets
+add column if not exists ticket_file_path text;
+
+create table if not exists public.invoice_categories (
+  id uuid primary key default gen_random_uuid(),
+  house_id uuid references public.houses(id) on delete cascade,
+  category_key text not null,
+  name text not null,
+  sort_order int not null default 100,
+  is_builtin boolean not null default false,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.shared_expenses
+add column if not exists invoice_category_id uuid references public.invoice_categories(id) on delete set null;
+
+alter table public.shared_expenses
+add column if not exists invoice_file_path text;
+
+alter table public.shared_expenses
+add column if not exists invoice_paid_at timestamptz;
+
+insert into public.invoice_categories (category_key, name, sort_order, is_builtin, is_active)
+select *
+from (
+  values
+    ('alquiler', 'Alquiler', 10, true, true),
+    ('suscripciones', 'Suscripciones', 20, true, true),
+    ('wifi', 'Wifi', 30, true, true),
+    ('agua', 'Agua', 40, true, true),
+    ('luz', 'Luz', 50, true, true)
+) as seed(category_key, name, sort_order, is_builtin, is_active)
+where not exists (
+  select 1
+  from public.invoice_categories ic
+  where ic.house_id is null
+    and lower(ic.category_key) = lower(seed.category_key)
+);
+
+
+-- 5) Alta de ticket con IDs/path generados por backend.
+create or replace function public.create_pending_ticket_expense(
+  p_house_public_code text,
+  p_ticket_kind text,
+  p_title text,
+  p_merchant text,
+  p_purchase_date date,
+  p_total_amount numeric,
+  p_item_names text[],
+  p_participant_profile_ids uuid[],
+  p_notes text default null,
+  p_paid_by_profile_id uuid default null,
+  p_ticket_file_path text default null,
+  p_ticket_id uuid default null,
+  p_expense_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_paid_by_profile_id uuid;
+  v_ticket_id uuid := coalesce(p_ticket_id, gen_random_uuid());
+  v_expense_id uuid := coalesce(p_expense_id, gen_random_uuid());
+  v_count int;
+  v_valid_count int;
+  v_base_share numeric(10,2);
+  v_share numeric(10,2);
+  v_remaining numeric(10,2);
+  v_i int;
+  v_item_name text;
+  v_participant_id uuid;
+  v_participant_status text;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not (public.is_house_member(v_house_id) or public.is_house_creator(v_house_id)) then
+    raise exception 'Sin acceso a la casa';
+  end if;
+
+  if p_total_amount is null or p_total_amount <= 0 then
+    raise exception 'El importe total debe ser mayor que 0';
+  end if;
+
+  if p_purchase_date is null then
+    raise exception 'La fecha de compra es obligatoria';
+  end if;
+
+  if p_title is null or length(trim(p_title)) = 0 then
+    raise exception 'El titulo es obligatorio';
+  end if;
+
+  if p_ticket_kind is null or p_ticket_kind not in ('purchase', 'unexpected') then
+    raise exception 'Tipo de ticket no valido';
+  end if;
+
+  v_paid_by_profile_id := coalesce(p_paid_by_profile_id, auth.uid());
+
+  if not exists (
+    select 1
+    from public.house_members hm
+    where hm.house_id = v_house_id
+      and hm.profile_id = v_paid_by_profile_id
+      and hm.is_active = true
+  ) then
+    raise exception 'La persona que paga no pertenece a la casa';
+  end if;
+
+  v_count := coalesce(array_length(p_participant_profile_ids, 1), 0);
+
+  if v_count = 0 then
+    raise exception 'Debes seleccionar al menos un participante';
+  end if;
+
+  select count(distinct x.profile_id)::int
+  into v_valid_count
+  from unnest(p_participant_profile_ids) as x(profile_id)
+  join public.house_members hm
+    on hm.house_id = v_house_id
+   and hm.profile_id = x.profile_id
+   and hm.is_active = true;
+
+  if v_valid_count <> v_count then
+    raise exception 'Hay participantes que no pertenecen a la casa o estan repetidos';
+  end if;
+
+  insert into public.purchase_tickets (
+    id,
+    house_id,
+    paid_by_profile_id,
+    created_by_profile_id,
+    merchant,
+    title,
+    purchase_date,
+    total_amount,
+    currency,
+    ticket_file_path,
+    notes,
+    ticket_kind,
+    status
+  )
+  values (
+    v_ticket_id,
+    v_house_id,
+    v_paid_by_profile_id,
+    auth.uid(),
+    coalesce(nullif(trim(p_merchant), ''), 'Manual'),
+    trim(p_title),
+    p_purchase_date,
+    round(p_total_amount, 2),
+    'EUR',
+    nullif(trim(coalesce(p_ticket_file_path, '')), ''),
+    p_notes,
+    p_ticket_kind,
+    'active'
+  );
+
+  if p_item_names is not null then
+    foreach v_item_name in array p_item_names
+    loop
+      if v_item_name is not null and length(trim(v_item_name)) > 0 then
+        insert into public.purchase_ticket_items (
+          ticket_id,
+          description,
+          quantity,
+          unit_price
+        )
+        values (
+          v_ticket_id,
+          trim(v_item_name),
+          1,
+          0
+        );
+
+        insert into public.house_item_catalog (
+          house_id,
+          name,
+          created_by_profile_id,
+          is_active
+        )
+        values (
+          v_house_id,
+          trim(v_item_name),
+          auth.uid(),
+          true
+        )
+        on conflict (house_id, normalized_name)
+        do update set is_active = true;
+      end if;
+    end loop;
+  end if;
+
+  insert into public.shared_expenses (
+    id,
+    house_id,
+    source_ticket_id,
+    created_by_profile_id,
+    paid_by_profile_id,
+    title,
+    description,
+    expense_type,
+    expense_date,
+    total_amount,
+    currency,
+    split_method,
+    status,
+    settlement_status
+  )
+  values (
+    v_expense_id,
+    v_house_id,
+    v_ticket_id,
+    auth.uid(),
+    v_paid_by_profile_id,
+    trim(p_title),
+    p_notes,
+    'ticket',
+    p_purchase_date,
+    round(p_total_amount, 2),
+    'EUR',
+    'equal',
+    'active',
+    'open'
+  );
+
+  v_base_share := trunc((p_total_amount / v_count)::numeric, 2);
+  v_remaining := round(p_total_amount, 2);
+
+  for v_i in 1..v_count
+  loop
+    v_participant_id := p_participant_profile_ids[v_i];
+
+    if v_i < v_count then
+      v_share := v_base_share;
+    else
+      v_share := round(v_remaining, 2);
+    end if;
+
+    v_participant_status := case
+      when v_participant_id = v_paid_by_profile_id then 'paid'
+      else 'pending'
+    end;
+
+    insert into public.expense_participants (
+      expense_id,
+      profile_id,
+      share_amount,
+      status
+    )
+    values (
+      v_expense_id,
+      v_participant_id,
+      v_share,
+      v_participant_status
+    );
+
+    v_remaining := round(v_remaining - v_share, 2);
+  end loop;
+
+  perform public.recalculate_expense_settlement(v_expense_id);
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'shared_expense',
+    v_expense_id,
+    'created',
+    jsonb_build_object(
+      'ticket_id', v_ticket_id,
+      'ticket_kind', p_ticket_kind,
+      'title', p_title,
+      'merchant', p_merchant,
+      'purchase_date', p_purchase_date,
+      'total_amount', round(p_total_amount, 2),
+      'participant_profile_ids', to_jsonb(p_participant_profile_ids),
+      'item_names', to_jsonb(p_item_names),
+      'paid_by_profile_id', v_paid_by_profile_id,
+      'ticket_file_path', p_ticket_file_path
+    )
+  );
+
+  return jsonb_build_object(
+    'ticket_id', v_ticket_id,
+    'expense_id', v_expense_id,
+    'house_public_code', p_house_public_code
+  );
+end;
+$$;
+
+grant execute on function public.create_pending_ticket_expense(
+  text,
+  text,
+  text,
+  text,
+  date,
+  numeric,
+  text[],
+  uuid[],
+  text,
+  uuid,
+  text,
+  uuid,
+  uuid
+) to authenticated;
+
+
+-- 6) Alta de factura con ID/path generado por backend.
+create or replace function public.create_pending_invoice_expense(
+  p_house_public_code text,
+  p_title text,
+  p_invoice_date date,
+  p_total_amount numeric,
+  p_participant_profile_ids uuid[],
+  p_invoice_category_id uuid default null,
+  p_custom_category_name text default null,
+  p_notes text default null,
+  p_paid_by_profile_id uuid default null,
+  p_invoice_file_path text default null,
+  p_expense_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_paid_by_profile_id uuid;
+  v_expense_id uuid := coalesce(p_expense_id, gen_random_uuid());
+  v_invoice_category_id uuid;
+  v_custom_category_key text;
+  v_count int;
+  v_valid_count int;
+  v_base_share numeric(10,2);
+  v_share numeric(10,2);
+  v_remaining numeric(10,2);
+  v_i int;
+  v_participant_id uuid;
+  v_participant_status text;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_house_id := public.get_accessible_house_id(p_house_public_code);
+
+  if not (public.is_house_member(v_house_id) or public.is_house_creator(v_house_id)) then
+    raise exception 'Sin acceso a la casa';
+  end if;
+
+  if p_total_amount is null or p_total_amount <= 0 then
+    raise exception 'El importe total debe ser mayor que 0';
+  end if;
+
+  if p_invoice_date is null then
+    raise exception 'La fecha de factura es obligatoria';
+  end if;
+
+  if p_title is null or length(trim(p_title)) = 0 then
+    raise exception 'El titulo es obligatorio';
+  end if;
+
+  v_paid_by_profile_id := coalesce(p_paid_by_profile_id, auth.uid());
+
+  if not exists (
+    select 1
+    from public.house_members hm
+    where hm.house_id = v_house_id
+      and hm.profile_id = v_paid_by_profile_id
+      and hm.is_active = true
+  ) then
+    raise exception 'La persona que paga no pertenece a la casa';
+  end if;
+
+  if p_invoice_category_id is not null then
+    select ic.id
+    into v_invoice_category_id
+    from public.invoice_categories ic
+    where ic.id = p_invoice_category_id
+      and ic.is_active = true
+      and (ic.house_id is null or ic.house_id = v_house_id)
+    limit 1;
+
+    if v_invoice_category_id is null then
+      raise exception 'Categoria de factura no valida';
+    end if;
+  elsif p_custom_category_name is not null and length(trim(p_custom_category_name)) > 0 then
+    v_custom_category_key := lower(regexp_replace(trim(p_custom_category_name), '[^a-zA-Z0-9]+', '-', 'g'));
+    v_custom_category_key := trim(both '-' from v_custom_category_key);
+
+    if v_custom_category_key is null or v_custom_category_key = '' then
+      v_custom_category_key := 'personalizada';
+    end if;
+
+    select ic.id
+    into v_invoice_category_id
+    from public.invoice_categories ic
+    where ic.house_id = v_house_id
+      and lower(ic.category_key) = lower(v_custom_category_key)
+    limit 1;
+
+    if v_invoice_category_id is null then
+      insert into public.invoice_categories (
+        house_id,
+        category_key,
+        name,
+        sort_order,
+        is_builtin,
+        is_active
+      )
+      values (
+        v_house_id,
+        v_custom_category_key,
+        trim(p_custom_category_name),
+        100,
+        false,
+        true
+      )
+      returning id into v_invoice_category_id;
+    end if;
+  else
+    raise exception 'Selecciona un tipo de factura';
+  end if;
+
+  v_count := coalesce(array_length(p_participant_profile_ids, 1), 0);
+
+  if v_count = 0 then
+    raise exception 'Debes seleccionar al menos un participante';
+  end if;
+
+  select count(distinct x.profile_id)::int
+  into v_valid_count
+  from unnest(p_participant_profile_ids) as x(profile_id)
+  join public.house_members hm
+    on hm.house_id = v_house_id
+   and hm.profile_id = x.profile_id
+   and hm.is_active = true;
+
+  if v_valid_count <> v_count then
+    raise exception 'Hay participantes que no pertenecen a la casa o estan repetidos';
+  end if;
+
+  insert into public.shared_expenses (
+    id,
+    house_id,
+    source_ticket_id,
+    created_by_profile_id,
+    paid_by_profile_id,
+    title,
+    description,
+    expense_type,
+    expense_date,
+    total_amount,
+    currency,
+    split_method,
+    status,
+    settlement_status,
+    invoice_category_id,
+    invoice_file_path
+  )
+  values (
+    v_expense_id,
+    v_house_id,
+    null,
+    auth.uid(),
+    v_paid_by_profile_id,
+    trim(p_title),
+    p_notes,
+    'invoice',
+    p_invoice_date,
+    round(p_total_amount, 2),
+    'EUR',
+    'equal',
+    'active',
+    'open',
+    v_invoice_category_id,
+    nullif(trim(coalesce(p_invoice_file_path, '')), '')
+  );
+
+  v_base_share := trunc((p_total_amount / v_count)::numeric, 2);
+  v_remaining := round(p_total_amount, 2);
+
+  for v_i in 1..v_count
+  loop
+    v_participant_id := p_participant_profile_ids[v_i];
+
+    if v_i < v_count then
+      v_share := v_base_share;
+    else
+      v_share := round(v_remaining, 2);
+    end if;
+
+    v_participant_status := case
+      when v_participant_id = v_paid_by_profile_id then 'paid'
+      else 'pending'
+    end;
+
+    insert into public.expense_participants (
+      expense_id,
+      profile_id,
+      share_amount,
+      status
+    )
+    values (
+      v_expense_id,
+      v_participant_id,
+      v_share,
+      v_participant_status
+    );
+
+    v_remaining := round(v_remaining - v_share, 2);
+  end loop;
+
+  perform public.recalculate_expense_settlement(v_expense_id);
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'invoice',
+    v_expense_id,
+    'created',
+    jsonb_build_object(
+      'title', p_title,
+      'invoice_date', p_invoice_date,
+      'total_amount', round(p_total_amount, 2),
+      'participant_profile_ids', to_jsonb(p_participant_profile_ids),
+      'paid_by_profile_id', v_paid_by_profile_id,
+      'invoice_category_id', v_invoice_category_id,
+      'invoice_file_path', p_invoice_file_path
+    )
+  );
+
+  return jsonb_build_object(
+    'expense_id', v_expense_id,
+    'house_public_code', p_house_public_code
+  );
+end;
+$$;
+
+grant execute on function public.create_pending_invoice_expense(
+  text,
+  text,
+  date,
+  numeric,
+  uuid[],
+  uuid,
+  text,
+  text,
+  uuid,
+  text,
+  uuid
+) to authenticated;
