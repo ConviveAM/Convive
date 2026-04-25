@@ -21,13 +21,15 @@ export type TicketScannerData = {
   articulos?: TicketScannerItem[];
   categoria?: TicketScannerCategory | null;
   periodo?: string | null;
-  imagen_url?: string | null;
 };
+
+export const DOCUMENT_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 export const SCANNER_ALLOWED_MEDIA_TYPES = [
   "image/jpeg",
   "image/jpg",
   "image/png",
   "image/webp",
-  "application/pdf",
 ] as const;
+
+export type ScannerAllowedMediaType = (typeof SCANNER_ALLOWED_MEDIA_TYPES)[number];

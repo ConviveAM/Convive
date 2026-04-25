@@ -86,7 +86,7 @@ function mapExpenseTicket(ticket: Record<string, unknown>): ExpenseTicket {
         ? null
         : toNumericLikeValue(ticket.my_share_amount, 0),
     currency: toStringValue(ticket.currency, "EUR"),
-    ticket_file_path: toNullableStringValue(ticket.ticket_file_path),
+    ticket_file_path: toNullableStringValue(ticket.ticket_file_path) ? "stored" : null,
     settlement_status: toNullableStringValue(ticket.settlement_status),
   };
 }
@@ -138,6 +138,9 @@ function mapInvoice(
 ): Invoice {
   const categoryName =
     categoryOverride.category_name?.trim() || readInvoiceCategoryName(invoice);
+  const invoiceFilePath =
+    toNullableStringValue(invoice.invoice_file_path) ??
+    toNullableStringValue(invoice.file_path);
 
   return {
     expense_id:
@@ -171,9 +174,7 @@ function mapInvoice(
         toStringValue(invoice.category_key) ||
         categoryName
     ),
-    invoice_file_path:
-      toNullableStringValue(invoice.invoice_file_path) ??
-      toNullableStringValue(invoice.file_path),
+    invoice_file_path: invoiceFilePath ? "stored" : null,
     settlement_status:
       toNullableStringValue(invoice.settlement_status) ??
       toNullableStringValue(invoice.invoice_status) ??
