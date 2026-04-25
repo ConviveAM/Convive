@@ -64,6 +64,13 @@ function formatPercentChange(percentChange: number | null) {
   } que el mes pasado`;
 }
 
+function formatComparisonMeta(percentChange: number | null) {
+  return formatPercentChange(percentChange).replace(
+    " del mes anterior",
+    " del\nmes anterior"
+  );
+}
+
 function getTrend(currentAmount: number, previousAmount: number) {
   if (currentAmount > previousAmount) return "up";
   if (currentAmount < previousAmount) return "down";
@@ -492,8 +499,8 @@ export function AreaGrupalScreen({
                             height={20}
                           />
                           <div>
-                            <p>{item.name}</p>
-                            <small>{formatPercentChange(item.percent_change)}</small>
+                        <p>{item.name}</p>
+                            <small>{formatComparisonMeta(item.percent_change)}</small>
                           </div>
                         </div>
                         <div className={styles.compareRight}>

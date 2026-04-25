@@ -502,6 +502,7 @@
 .compareLeft small {
   color: #5a5652;
   font-size: 11px;
+  white-space: pre-line;
 }
 
 .compareRight {
