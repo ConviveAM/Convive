@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { AjustesScreen } from "../../../../../components/ajustes/ajustes-screen";
+import { HouseOnboardingScreen } from "../../../../../components/auth/house-onboarding-screen";
 import { AreaGrupalScreen } from "../../../../../components/area-grupal/area-grupal-screen";
 import { AreaPersonalScreen } from "../../../../../components/area-personal/area-personal-screen";
 import { AreaPersonalHistoryScreen } from "../../../../../components/area-personal/history-screen";
@@ -16,6 +17,7 @@ import { FacturasHistoryScreen } from "../../../../../components/facturas/factur
 import { GastosAddTicketScreen } from "../../../../../components/gastos/gastos-add-ticket-screen";
 import { GastosDivisionScreen } from "../../../../../components/gastos/gastos-division-screen";
 import { GastosPagoSimplificadoScreen } from "../../../../../components/gastos/gastos-pago-simplificado-screen";
+import { GastosRepartoScreen } from "../../../../../components/gastos/gastos-reparto-screen";
 import { GastosScreen } from "../../../../../components/gastos/gastos-screen";
 import { GastosSimplificarScreen } from "../../../../../components/gastos/gastos-simplificar-screen";
 import { GastosTicketsScreen } from "../../../../../components/gastos/gastos-tickets-screen";
@@ -115,6 +117,21 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
       <ElectricalMenu
         houseCode={routeContext.house.public_code}
         dashboardPath={routeContext.dashboardPath}
+      />
+    );
+  }
+
+  if (sectionPath === "completar-perfil") {
+    const profileSettings = await loadProfileSettingsWithClient(
+      routeContext.supabase,
+      routeContext.house.public_code
+    );
+
+    return (
+      <HouseOnboardingScreen
+        houseCode={routeContext.house.public_code}
+        dashboardPath={routeContext.dashboardPath}
+        settings={profileSettings}
       />
     );
   }
@@ -515,6 +532,22 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
         currentProfileId={routeContext.profile.id}
       />
       ,
+      routeContext.dashboardPath,
+      "gastos"
+    );
+  }
+
+  if (sectionPath.startsWith("gastos/division/reparto/")) {
+    const expenseId = sectionPath.replace("gastos/division/reparto/", "");
+    const sourceExpenses = expensesDashboard?.shared_expenses ?? [];
+    const selectedExpense =
+      sourceExpenses.find((expense) => expense.expense_id === expenseId) ?? null;
+
+    return withMiniDoor(
+      <GastosRepartoScreen
+        dashboardPath={routeContext.dashboardPath}
+        expense={selectedExpense}
+      />,
       routeContext.dashboardPath,
       "gastos"
     );

@@ -10,8 +10,8 @@
 }
 
 .panel {
-  width: calc(100% * 7 / 12);
-  max-width: 1040px;
+  width: calc(100% * 10 / 12);
+  max-width: 1520px;
   border-radius: 8px;
   overflow: hidden;
   background: color-mix(in srgb, #f0eae4 40%, transparent);
@@ -26,8 +26,33 @@
   color: #f0eae4;
   padding: 1rem 1.1rem;
   display: grid;
-  grid-template-columns: 56px 1fr 56px;
+  grid-template-columns: 56px 1fr auto;
   align-items: center;
+}
+
+.headerContractButton {
+  min-height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: #be6f8b;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 400;
+  padding: 0.25rem 0.7rem;
+  justify-self: end;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease, filter 0.15s ease;
+}
+
+.headerContractButton:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  filter: brightness(1.03);
+}
+
+.headerContractButton:active {
+  transform: translateY(1px);
 }
 
 .backLink {
@@ -64,15 +89,17 @@
 }
 
 .content {
-  padding: 1.05rem;
+  padding: 1.6rem 1.05rem 1.05rem;
   display: grid;
   gap: 1rem;
 }
 
 .topGrid {
+  margin-top: 1.1rem;
   display: grid;
   gap: 0.9rem;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
 }
 
 .block {
@@ -101,7 +128,18 @@
 }
 
 .houseBlock {
-  padding: 0.95rem 1rem 1rem;
+  background: #8b1a2f;
+  padding: 1.05rem 1rem 1rem;
+  display: grid;
+  align-content: start;
+}
+
+@media (min-width: 961px) {
+  .personalBlock,
+  .profileBlock,
+  .houseBlock {
+    height: 270px;
+  }
 }
 
 .appBlock {
@@ -120,7 +158,7 @@
 }
 
 .personalFields {
-  margin-top: 1.35rem;
+  margin-top: 0.8rem;
   display: grid;
   gap: 0.45rem;
 }
@@ -133,7 +171,7 @@
   padding: 0.35rem 0.45rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.45rem;
   color: #3d3733;
   font-family: "Poppins", sans-serif;
@@ -154,9 +192,11 @@
 
 .inlineInput,
 .settingInput,
+.settingSelect,
 .memberSelect {
   min-width: 0;
-  width: 100%;
+  width: auto;
+  flex: 1 1 auto;
   border: none;
   background: transparent;
   color: #3d3733;
@@ -165,12 +205,54 @@
   outline: none;
 }
 
+.settingInputWithIcon {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.settingInputWithIcon .settingInput {
+  padding-right: 1.6rem;
+}
+
+.settingInputIcon {
+  position: absolute;
+  right: 0.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.settingSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath d='M3 5l4 4 4-4' fill='none' stroke='%238b1a2f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 0.1rem) center;
+  background-size: 14px 14px;
+  padding-right: 1.2rem;
+}
+
+.settingSelect::-ms-expand {
+  display: none;
+}
+
 .fieldLabel {
   color: #8b1a2f;
   font-family: "Poppins", sans-serif;
   font-size: 0.66rem;
   font-weight: 600;
   white-space: nowrap;
+  order: -1;
+  margin-left: 0;
+  margin-right: 0.45rem;
+  text-align: left;
 }
 
 .saveButton,
@@ -186,12 +268,25 @@
   padding: 0.35rem 0.85rem;
 }
 
+.actionSlot {
+  margin-top: 0.7rem;
+  min-height: 30px;
+  display: grid;
+  align-items: center;
+}
+
+.hiddenActionButton {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .saveButton:disabled,
 .houseSaveButton:disabled {
   opacity: 0.7;
 }
 
 .saveButton {
+  margin-top: 0;
   justify-self: center;
   display: block;
   margin-inline: auto;
@@ -207,10 +302,118 @@
   height: 58px;
   display: grid;
   place-items: center;
+  overflow: hidden;
+}
+
+.avatarBadgeButton {
+  position: absolute;
+  top: -12px;
+  width: 58px;
+  height: 58px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .avatarBadge img {
   border-radius: 999px;
+}
+
+.avatarOverlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.38);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.avatarBadge:hover .avatarOverlay {
+  opacity: 1;
+}
+
+.avatarOverlayIcon {
+  width: 22px;
+  height: 22px;
+  filter: brightness(0) saturate(100%) invert(100%);
+}
+
+.avatarUploadPopover {
+  width: min(460px, calc(100vw - 2rem));
+  background: #f0eae4;
+  border: 1px dotted #8b1a2f;
+  border-radius: 8px;
+  padding: 0;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.avatarDropzone {
+  min-height: 220px;
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  row-gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.avatarDropzoneActive {
+  background: rgba(139, 26, 47, 0.06);
+}
+
+.avatarDropIcon {
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.avatarDropTitle {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.avatarDropHint {
+  margin: 0;
+  color: #736d68;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.avatarUploadInput {
+  display: none;
+}
+
+.avatarFileName,
+.avatarUploadError {
+  margin: 0.2rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.avatarFileName {
+  color: #8b1a2f;
+}
+
+.avatarUploadError {
+  color: #8b1a2f;
 }
 
 .profileName {
@@ -300,7 +503,8 @@
 }
 
 .houseBlock .sectionTitle {
-  color: #8b1a2f;
+  color: #f0eae4;
+  font-weight: 700;
 }
 
 .appBlock .sectionTitle {
@@ -321,7 +525,7 @@
 }
 
 .houseBlock .sectionTitle + .settingRow {
-  margin-top: 1.9rem;
+  margin-top: 0.8rem;
 }
 
 .deleteParticipantButton {
@@ -353,13 +557,14 @@
 .settingHint,
 .feedbackMessage {
   margin: 0.45rem 0 0;
-  color: #8b1a2f;
+  color: #f0eae4;
   font-family: "Poppins", sans-serif;
   font-size: 0.78rem;
   font-weight: 500;
 }
 
 .houseSaveButton {
+  margin-top: 0;
   display: flex;
   width: fit-content;
   align-items: center;
@@ -382,12 +587,79 @@
   font-size: 0.84rem;
 }
 
+.houseBlock .settingLabel {
+  color: rgb(139, 26, 47);
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.houseBlock .settingRow {
+  grid-template-columns: minmax(170px, 0.62fr) minmax(0, 1fr);
+}
+
 .settingLabel {
   font-weight: 600;
 }
 
 .settingValue {
   font-weight: 500;
+}
+
+.settingDateTrigger {
+  width: 100%;
+  min-height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #3d3733;
+  justify-content: space-between;
+  padding: 0 0.1rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.settingDateTrigger:hover,
+.settingDateTrigger:focus,
+.settingDateTrigger:focus-visible,
+.settingDateTrigger:active {
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.settingSelect:hover,
+.settingSelect:focus,
+.settingSelect:focus-visible,
+.settingSelect:active {
+  background-color: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+.dateArrow {
+  width: 14px;
+  height: 14px;
+  transform: rotate(-90deg);
+  display: block;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.calendarPopover {
+  background: #f0ebe6;
+  border: 1px solid #d8d0cb;
+  border-radius: 8px;
+  padding: 0.45rem;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+}
+
+.calendar {
+  margin: 0;
 }
 
 .appSettings {
@@ -509,7 +781,7 @@
 
   .header {
     padding: 0.85rem 0.7rem;
-    grid-template-columns: 30px 1fr 30px;
+    grid-template-columns: 30px 1fr auto;
   }
 
   .backLink {
@@ -522,6 +794,12 @@
   .backIcon {
     width: 44px;
     height: 44px;
+  }
+
+  .headerContractButton {
+    min-height: 24px;
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
   }
 
   .title {
@@ -538,6 +816,12 @@
     width: 44px;
     height: 44px;
     border-width: 6px;
+  }
+
+  .avatarBadgeButton {
+    top: -8px;
+    width: 44px;
+    height: 44px;
   }
 
   .avatarBadge img {

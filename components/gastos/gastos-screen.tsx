@@ -192,7 +192,7 @@ export function GastosScreen({
                       {formatCurrency(expense.total_amount, expense.currency)}
                     </p>
                     <Link
-                      href={`${basePath}/gastos/division`}
+                      href={`${basePath}/gastos/division/reparto/${expense.expense_id}`}
                       className={`convive-button ${styles.actionButton}`}
                     >
                       Ver reparto

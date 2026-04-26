@@ -18,6 +18,12 @@ type AuthPayload = {
   password: string;
 };
 
+type SignUpPayload = AuthPayload & {
+  firstName: string;
+  lastName: string;
+  monthlyRent: string;
+};
+
 type UpdateProfileSettingsInput = {
   houseCode: string;
   dashboardPath: string;
@@ -53,12 +59,37 @@ function revalidateProfilePaths(dashboardPath: string) {
   revalidatePath(`${dashboardPath}/area-grupal`);
 }
 
-export async function signUpWithEmail({ email, password }: AuthPayload) {
+function buildOnboardingPath(dashboardPath: string) {
+  return `${dashboardPath}/completar-perfil`;
+}
+
+export async function signUpWithEmail({
+  email,
+  password,
+  firstName,
+  lastName,
+  monthlyRent,
+}: SignUpPayload) {
   const supabase = await createClient();
+  const trimmedFirstName = firstName.trim();
+  const trimmedLastName = lastName.trim();
+  const trimmedMonthlyRent = monthlyRent.trim();
+
+  if (!trimmedFirstName || !trimmedLastName || !trimmedMonthlyRent) {
+    return { error: "Nombre, apellidos y alquiler mensual son obligatorios." };
+  }
+
+  const fullName = `${trimmedFirstName} ${trimmedLastName}`.trim();
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      data: {
+        full_name: fullName,
+        monthly_rent: trimmedMonthlyRent,
+      },
+    },
   });
 
   if (error) {
@@ -69,6 +100,16 @@ export async function signUpWithEmail({ email, password }: AuthPayload) {
     return {
       error: "Debes confirmar tu correo antes de crear o unirte a un piso.",
     };
+  }
+
+  const { error: profileError } = await supabase.rpc("update_own_profile_settings", {
+    p_full_name: fullName,
+    p_email: email.trim().toLowerCase(),
+    p_avatar_url: null,
+  });
+
+  if (profileError) {
+    return { error: profileError.message };
   }
 
   return { success: true };
@@ -149,7 +190,9 @@ export async function signInAndJoinHouseWithEmail({
 
   return {
     success: true,
-    dashboardPath: buildDashboardPath(profilePublicCode, housePublicCode),
+    dashboardPath: buildOnboardingPath(
+      buildDashboardPath(profilePublicCode, housePublicCode)
+    ),
   };
 }
 
@@ -180,7 +223,7 @@ export async function createHouseAction(formData: {
     return { error: "No he podido obtener el codigo publico del piso." };
   }
 
-  redirect(buildDashboardPath(profile.public_code, housePublicCode));
+  redirect(buildOnboardingPath(buildDashboardPath(profile.public_code, housePublicCode)));
 }
 
 export async function joinHouseAction(formData: { code: string }) {
@@ -201,7 +244,7 @@ export async function joinHouseAction(formData: { code: string }) {
     return { error: "No he podido obtener el codigo publico del piso." };
   }
 
-  redirect(buildDashboardPath(profile.public_code, housePublicCode));
+  redirect(buildOnboardingPath(buildDashboardPath(profile.public_code, housePublicCode)));
 }
 
 export async function joinHouseAndReturnDashboardPathAction(formData: {
@@ -225,7 +268,9 @@ export async function joinHouseAndReturnDashboardPathAction(formData: {
   }
 
   return {
-    dashboardPath: buildDashboardPath(profile.public_code, housePublicCode),
+    dashboardPath: buildOnboardingPath(
+      buildDashboardPath(profile.public_code, housePublicCode)
+    ),
   };
 }
 

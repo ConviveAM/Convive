@@ -98,15 +98,15 @@ export function SecureDocumentViewer({
         onClick={(event) => event.stopPropagation()}
       >
         <header className={styles.header}>
-          <h2 className={styles.title}>{title}</h2>
           <button
             type="button"
-            className={styles.closeButton}
+            className={styles.backButton}
             onClick={closeDocument}
             aria-label="Cerrar"
           >
-            x
+            <span aria-hidden="true" className={styles.backIcon} />
           </button>
+          <h2 className={styles.title}>{title}</h2>
         </header>
         {signedUrl ? (
           <div className={styles.imageWrap}>

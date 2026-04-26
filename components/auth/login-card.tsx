@@ -34,6 +34,12 @@ const loginSchema = z.object({
 
 const registerSchema = z
   .object({
+    firstName: z.string().trim().min(1, "El nombre es obligatorio"),
+    lastName: z.string().trim().min(1, "Los apellidos son obligatorios"),
+    monthlyRent: z
+      .string()
+      .trim()
+      .min(1, "El alquiler mensual es obligatorio"),
     email: z
       .string()
       .min(1, "El correo es obligatorio")
@@ -101,6 +107,9 @@ export function LoginCard({
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      firstName: "",
+      lastName: "",
+      monthlyRent: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -180,6 +189,9 @@ export function LoginCard({
 
     startTransition(async () => {
       const result = await signUpWithEmail({
+        firstName: values.firstName,
+        lastName: values.lastName,
+        monthlyRent: values.monthlyRent,
         email: values.email,
         password: values.password,
       });
@@ -394,6 +406,24 @@ export function LoginCard({
             >
               <div className={styles.field}>
                 <div className={styles.inputWrap}>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    className={styles.input}
+                    placeholder="Alquiler mensual"
+                    disabled={isPending}
+                    {...registerForm.register("monthlyRent")}
+                  />
+                </div>
+                {registerForm.formState.errors.monthlyRent ? (
+                  <p className={styles.error}>
+                    {registerForm.formState.errors.monthlyRent.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className={styles.field}>
+                <div className={styles.inputWrap}>
                   <Image
                     src="/iconos/SVGRepo_iconCarrier.svg"
                     alt="Icono de correo"
@@ -457,10 +487,60 @@ export function LoginCard({
 
           <TabsContent value="register">
             <form
-              className={styles.form}
+              className={`${styles.form} ${styles.registerForm}`}
               onSubmit={registerForm.handleSubmit(onRegisterSubmit)}
               noValidate
             >
+              <div className={styles.field}>
+                <div className={styles.inputWrap}>
+                  <Image
+                    src="/iconos/persons-svgrepo-com 1.svg"
+                    alt="Icono de nombre"
+                    width={16}
+                    height={16}
+                    className={styles.icon}
+                  />
+                  <Input
+                    type="text"
+                    className={styles.input}
+                    placeholder="Nombre"
+                    autoComplete="given-name"
+                    disabled={isPending}
+                    {...registerForm.register("firstName")}
+                  />
+                </div>
+                {registerForm.formState.errors.firstName ? (
+                  <p className={styles.error}>
+                    {registerForm.formState.errors.firstName.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className={styles.field}>
+                <div className={styles.inputWrap}>
+                  <Image
+                    src="/iconos/persons-svgrepo-com 1.svg"
+                    alt="Icono de apellidos"
+                    width={16}
+                    height={16}
+                    className={styles.icon}
+                  />
+                  <Input
+                    type="text"
+                    className={styles.input}
+                    placeholder="Apellidos"
+                    autoComplete="family-name"
+                    disabled={isPending}
+                    {...registerForm.register("lastName")}
+                  />
+                </div>
+                {registerForm.formState.errors.lastName ? (
+                  <p className={styles.error}>
+                    {registerForm.formState.errors.lastName.message}
+                  </p>
+                ) : null}
+              </div>
+
               <div className={styles.field}>
                 <div className={styles.inputWrap}>
                   <Image
@@ -511,7 +591,7 @@ export function LoginCard({
                 ) : null}
               </div>
 
-              <div className={styles.field}>
+              <div className={`${styles.field} ${styles.registerFieldFull}`}>
                 <div className={styles.inputWrap}>
                   <Image
                     src="/iconos/key-svgrepo-com 1.svg"
@@ -539,7 +619,11 @@ export function LoginCard({
               {globalError ? <p className={styles.error}>{globalError}</p> : null}
               {globalSuccess ? <p className={styles.success}>{globalSuccess}</p> : null}
 
-              <Button type="submit" className={styles.submit} disabled={isPending}>
+              <Button
+                type="submit"
+                className={`${styles.submit} ${styles.registerSubmit}`}
+                disabled={isPending}
+              >
                 {isPending ? "Creando cuenta..." : "Siguiente"}
               </Button>
             </form>
