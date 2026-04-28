@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -426,7 +426,7 @@ export function LimpiezaScreen({
     const customZoneName = normalizedManualZone || null;
 
     if (!normalizedTitle) {
-      setErrorMessage("Introduce un titulo para la tarea.");
+      setErrorMessage("Introduce un título para la tarea.");
       return;
     }
 
@@ -1054,3 +1054,4 @@ export function LimpiezaScreen({
     </main>
   );
 }
+

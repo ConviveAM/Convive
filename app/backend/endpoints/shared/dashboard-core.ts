@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+﻿import { notFound, redirect } from "next/navigation";
 
 import type {
   AddExpenseFormOptions,
@@ -769,10 +769,10 @@ export function getJoinHouseErrorMessage(errorMessage?: string | null) {
     normalizedError.includes("full") ||
     normalizedError.includes("used")
   ) {
-    return "Codigo de invitacion no valido";
+    return "Código de invitación no válido";
   }
 
-  return errorMessage?.trim() || "Codigo de invitacion no valido";
+  return errorMessage?.trim() || "Código de invitación no válido";
 }
 
 export function formatCurrency(amount: number | string, currency = "EUR") {
@@ -2068,3 +2068,4 @@ export async function loadPersonalAreaDashboardWithClient(
     currentProfileId
   );
 }
+

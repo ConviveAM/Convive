@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
@@ -329,7 +329,7 @@ export function AreaGrupalScreen({
                               <AlertDialogTitle>Eliminar participante</AlertDialogTitle>
                               <AlertDialogDescription>
                                 Esta acción sacará a {member.display_name} del piso sin borrar
-                                su historial. ¿Quieres continuar?
+                                su historial. Â¿Quieres continuar?
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -613,3 +613,4 @@ export function AreaGrupalScreen({
     </main>
   );
 }
+

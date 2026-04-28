@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -229,7 +229,7 @@ export function FacturasAddScreen({
     const customCategoryName = normalizedManualCategory || null;
 
     if (!normalizedTitle) {
-      setErrorMessage("Introduce un titulo para la factura.");
+      setErrorMessage("Introduce un título para la factura.");
       return;
     }
     if (!invoiceDate) {
@@ -237,7 +237,7 @@ export function FacturasAddScreen({
       return;
     }
     if (!Number.isFinite(parsedTotalAmount) || parsedTotalAmount <= 0) {
-      setErrorMessage("Introduce un importe total valido.");
+      setErrorMessage("Introduce un importe total válido.");
       return;
     }
     if (!invoiceCategoryId && !customCategoryName) {
@@ -465,7 +465,7 @@ export function FacturasAddScreen({
                   onChange={(event) => setTotalAmount(event.target.value)}
                   placeholder="0,00"
                 />
-                <span className={styles.totalCurrency}>€</span>
+                <span className={styles.totalCurrency}>â‚¬</span>
               </div>
             </section>
 
@@ -488,3 +488,4 @@ export function FacturasAddScreen({
     </main>
   );
 }
+
