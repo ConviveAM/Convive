@@ -6,12 +6,13 @@ import { toActionError } from "../shared/action-result";
 import {
   DOCUMENT_SIGNED_URL_TTL_SECONDS,
   DOCUMENTS_BUCKET,
-  validateDocumentUploadPayload,
+  validateProfileAvatarUploadPayload,
 } from "../shared/document-storage";
 import { revalidatePaths } from "../shared/revalidate";
 import type { DocumentUploadPayload } from "../../../../lib/document-upload-types";
 import {
   buildProfileAvatarPath,
+  PROFILE_AVATAR_DEFAULTS,
   isDefaultProfileAvatar,
   isProfileAvatarStoragePath,
 } from "../../../../lib/profile-avatar";
@@ -30,7 +31,13 @@ type GetProfileAvatarSignedUrlInput = {
   storagePath: string;
 };
 
+type DeleteProfileAvatarInput = {
+  dashboardPath: string;
+  storagePath: string;
+};
+
 type ProfileAvatarRow = {
+  avatar_url?: string | null;
   avatar_storage_path?: string | null;
 };
 
@@ -50,7 +57,7 @@ export async function uploadProfileAvatarAction(
 
   try {
     const { supabase, profile } = await getAuthenticatedProfileContext();
-    const { buffer, extension } = validateDocumentUploadPayload(input.document);
+    const { buffer, extension } = validateProfileAvatarUploadPayload(input.document);
     const storagePath = buildProfileAvatarPath({
       profileId: profile.id,
       extension,
@@ -209,6 +216,63 @@ export async function getProfileAvatarSignedUrlAction(
     }
 
     return { success: true, data: { signedUrl: signedResult.data.signedUrl } };
+  } catch (error) {
+    return { success: false, error: toActionError(error) };
+  }
+}
+
+export async function deleteProfileAvatarAction(
+  input: DeleteProfileAvatarInput
+): Promise<ActionResult<{ avatarUrl: string }>> {
+  try {
+    const { supabase, profile } = await getAuthenticatedProfileContext();
+    const storagePath = input.storagePath.trim();
+
+    if (!isProfileAvatarStoragePath(storagePath, profile.id)) {
+      return { success: false, error: "Avatar no permitido." };
+    }
+
+    const { data, error: readError } = await supabase
+      .from("profiles")
+      .select("avatar_url, avatar_storage_path")
+      .eq("id", profile.id)
+      .maybeSingle();
+
+    if (readError) {
+      return { success: false, error: readError.message };
+    }
+
+    const row = data as ProfileAvatarRow | null;
+    if (row?.avatar_storage_path !== storagePath) {
+      return { success: false, error: "La foto no pertenece a tu perfil." };
+    }
+
+    const fallbackAvatar = PROFILE_AVATAR_DEFAULTS[0];
+    const nextAvatarUrl =
+      row.avatar_url === storagePath ? fallbackAvatar : row.avatar_url ?? fallbackAvatar;
+
+    const { error: clearError } = await supabase.rpc(
+      "clear_own_profile_avatar_storage",
+      {
+        p_storage_path: storagePath,
+        p_fallback_avatar_url: fallbackAvatar,
+      }
+    );
+
+    if (clearError) {
+      return { success: false, error: clearError.message };
+    }
+
+    const removeResult = await supabase.storage
+      .from(DOCUMENTS_BUCKET)
+      .remove([storagePath]);
+
+    if (removeResult.error) {
+      return { success: false, error: removeResult.error.message };
+    }
+
+    revalidateAvatarPaths(input.dashboardPath);
+    return { success: true, data: { avatarUrl: nextAvatarUrl } };
   } catch (error) {
     return { success: false, error: toActionError(error) };
   }

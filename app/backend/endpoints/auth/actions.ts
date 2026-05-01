@@ -52,6 +52,11 @@ type RemoveHouseMemberInput = {
   profileId: string;
 };
 
+type LeaveHouseInput = {
+  houseCode: string;
+  dashboardPath: string;
+};
+
 type ProfileAvatarRow = {
   avatar_storage_path?: string | null;
 };
@@ -456,6 +461,34 @@ export async function removeHouseMemberAction(
         error instanceof Error
           ? error.message
           : "No se pudo sacar al participante del piso.",
+    };
+  }
+}
+
+export async function leaveHouseAction(
+  input: LeaveHouseInput
+): Promise<ActionResult<{ left: true }>> {
+  try {
+    const { supabase } = await getAuthenticatedProfileContext();
+
+    const { error } = await supabase.rpc("leave_current_house", {
+      p_house_public_code: input.houseCode,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    revalidateProfilePaths(input.dashboardPath);
+
+    return { success: true, data: { left: true } };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "No se pudo salir del piso.",
     };
   }
 }

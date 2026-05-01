@@ -11,14 +11,39 @@ const EXTENSION_BY_MEDIA_TYPE: Record<string, string> = {
   "image/webp": "webp",
 };
 
+const AVATAR_EXTENSION_BY_MEDIA_TYPE: Record<string, string> = {
+  ...EXTENSION_BY_MEDIA_TYPE,
+  "image/svg+xml": "svg",
+};
+
 export function getDocumentFileExtension(mediaType: string) {
   return EXTENSION_BY_MEDIA_TYPE[mediaType] ?? null;
 }
 
 export function validateDocumentUploadPayload(document: DocumentUploadPayload) {
-  const extension = getDocumentFileExtension(document.mediaType);
+  return validateImageUploadPayload(document, {
+    extensionByMediaType: EXTENSION_BY_MEDIA_TYPE,
+    invalidFormatMessage: "Formato no permitido. Usa JPG, PNG o WEBP.",
+  });
+}
+
+export function validateProfileAvatarUploadPayload(document: DocumentUploadPayload) {
+  return validateImageUploadPayload(document, {
+    extensionByMediaType: AVATAR_EXTENSION_BY_MEDIA_TYPE,
+    invalidFormatMessage: "Formato no permitido. Usa JPG, PNG, WEBP o SVG.",
+  });
+}
+
+function validateImageUploadPayload(
+  document: DocumentUploadPayload,
+  options: {
+    extensionByMediaType: Record<string, string>;
+    invalidFormatMessage: string;
+  }
+) {
+  const extension = options.extensionByMediaType[document.mediaType] ?? null;
   if (!extension) {
-    throw new Error("Formato no permitido. Usa JPG, PNG o WEBP.");
+    throw new Error(options.invalidFormatMessage);
   }
 
   if (
@@ -86,6 +111,20 @@ function hasExpectedImageSignature(buffer: Buffer, mediaType: string) {
     return (
       buffer.toString("ascii", 0, 4) === "RIFF" &&
       buffer.toString("ascii", 8, 12) === "WEBP"
+    );
+  }
+
+  if (mediaType === "image/svg+xml") {
+    const svgText = buffer.toString("utf8").trimStart();
+    const normalizedSvgText = svgText.toLowerCase();
+
+    return (
+      (normalizedSvgText.startsWith("<svg") ||
+        (normalizedSvgText.startsWith("<?xml") &&
+          normalizedSvgText.includes("<svg"))) &&
+      !normalizedSvgText.includes("<script") &&
+      !/\son[a-z]+\s*=/.test(normalizedSvgText) &&
+      !normalizedSvgText.includes("javascript:")
     );
   }
 

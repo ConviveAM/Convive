@@ -10,6 +10,7 @@ import {
   updateProfileSettingsAction,
 } from "../../app/backend/endpoints/auth/actions";
 import {
+  deleteProfileAvatarAction,
   getProfileAvatarSignedUrlAction,
   selectProfileAvatarAction,
   uploadProfileAvatarAction,
@@ -269,11 +270,17 @@ export function AjustesScreen({
   };
 
   const handleAvatarFile = async (file: File) => {
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "image/svg+xml",
+    ];
     setAvatarUploadSuccess(null);
 
     if (!allowedTypes.includes(file.type)) {
-      setAvatarUploadError("Solo se permiten imágenes JPG, PNG o WEBP.");
+      setAvatarUploadError("Solo se permiten imágenes JPG, PNG, WEBP o SVG.");
       return;
     }
 
@@ -310,6 +317,35 @@ export function AjustesScreen({
         if (avatarInputRef.current) {
           avatarInputRef.current.value = "";
         }
+      }
+    });
+  };
+
+  const handleDeleteCustomAvatar = () => {
+    if (!customAvatarPath || isAvatarPending) {
+      return;
+    }
+
+    setAvatarUploadError(null);
+    setAvatarUploadSuccess(null);
+    startAvatarTransition(async () => {
+      const result = await deleteProfileAvatarAction({
+        dashboardPath: basePath,
+        storagePath: customAvatarPath,
+      });
+
+      if (result.success) {
+        setCustomAvatarPath(null);
+        setCustomAvatarSignedUrl(null);
+        setSelectedAvatarUrl(result.data.avatarUrl);
+        setAvatarFileName(null);
+        setAvatarUploadSuccess("Foto subida eliminada.");
+        router.refresh();
+        return;
+      }
+
+      if ("error" in result) {
+        setAvatarUploadError(result.error);
       }
     });
   };
@@ -624,13 +660,15 @@ export function AjustesScreen({
                     />
                     <p className={styles.avatarDropTitle}>Sube o arrastra una imagen</p>
                     <p className={styles.avatarDropHint}>
-                      {isAvatarPending ? "Subiendo imagen..." : "JPG, PNG o WEBP - Max 10MB"}
+                      {isAvatarPending
+                        ? "Procesando imagen..."
+                        : "JPG, PNG, WEBP o SVG - Max 10MB"}
                     </p>
                   </div>
                   <input
                     ref={avatarInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                    accept="image/jpeg,image/png,image/webp,image/svg+xml,.jpg,.jpeg,.png,.webp,.svg"
                     className={styles.avatarUploadInput}
                     onChange={(event) => {
                       const file = event.target.files?.[0];
@@ -647,6 +685,16 @@ export function AjustesScreen({
                   ) : null}
                   {avatarUploadError ? (
                     <p className={styles.avatarUploadError}>{avatarUploadError}</p>
+                  ) : null}
+                  {customAvatarPath ? (
+                    <button
+                      type="button"
+                      className={styles.avatarDeleteButton}
+                      onClick={handleDeleteCustomAvatar}
+                      disabled={isAvatarPending}
+                    >
+                      {isAvatarPending ? "Procesando..." : "Eliminar foto subida"}
+                    </button>
                   ) : null}
                 </PopoverContent>
               </Popover>

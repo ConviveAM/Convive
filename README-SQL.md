@@ -6833,13 +6833,13 @@ values (
   'convive-documents',
   false,
   10485760,
-  array['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+  array['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml']
 )
 on conflict (id) do update
 set
   public = false,
   file_size_limit = 10485760,
-  allowed_mime_types = array['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  allowed_mime_types = array['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
 
 
 -- 2) Helper seguro para extraer house_id desde paths:
@@ -8052,7 +8052,17 @@ begin
   limit 1;
 
   if v_avatar_url is not null
-     and v_avatar_url not in ('/images/IconoperfilM.webp', '/images/IconoperfilH.webp') then
+     and v_avatar_url not in (
+       '/images/IconoperfilM.webp',
+       '/images/IconoperfilH.webp',
+       '/iconos/icono1.svg',
+       '/iconos/icono2.svg',
+       '/iconos/icono3.svg',
+       '/iconos/icono4.svg',
+       '/iconos/icono5.svg',
+       '/iconos/icono6.svg',
+       '/iconos/icono7.svg'
+     ) then
     if public.storage_path_profile_id(v_avatar_url) is distinct from auth.uid() then
       raise exception 'Avatar no permitido';
     end if;
@@ -8082,6 +8092,69 @@ $$;
 grant execute on function public.set_own_profile_avatar(text, text) to authenticated;
 
 
+create or replace function public.clear_own_profile_avatar_storage(
+  p_storage_path text,
+  p_fallback_avatar_url text default '/images/IconoperfilM.webp'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_storage_path text;
+  v_fallback_avatar_url text;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  v_storage_path := nullif(trim(coalesce(p_storage_path, '')), '');
+  v_fallback_avatar_url := nullif(trim(coalesce(p_fallback_avatar_url, '')), '');
+
+  if public.storage_path_profile_id(v_storage_path) is distinct from auth.uid() then
+    raise exception 'Ruta de avatar no permitida';
+  end if;
+
+  if v_fallback_avatar_url is null
+     or v_fallback_avatar_url not in (
+       '/images/IconoperfilM.webp',
+       '/images/IconoperfilH.webp',
+       '/iconos/icono1.svg',
+       '/iconos/icono2.svg',
+       '/iconos/icono3.svg',
+       '/iconos/icono4.svg',
+       '/iconos/icono5.svg',
+       '/iconos/icono6.svg',
+       '/iconos/icono7.svg'
+     ) then
+    raise exception 'Avatar de respaldo no permitido';
+  end if;
+
+  update public.profiles
+  set
+    avatar_url = case
+      when avatar_url = v_storage_path then v_fallback_avatar_url
+      else avatar_url
+    end,
+    avatar_storage_path = null
+  where id = auth.uid()
+    and avatar_storage_path = v_storage_path;
+
+  if not found then
+    raise exception 'Foto de perfil no encontrada';
+  end if;
+
+  return jsonb_build_object(
+    'avatar_url', v_fallback_avatar_url,
+    'avatar_storage_path', null
+  );
+end;
+$$;
+
+grant execute on function public.clear_own_profile_avatar_storage(text, text) to authenticated;
+
+
 create or replace function public.update_own_profile_settings(
   p_full_name text,
   p_email text,
@@ -8103,7 +8176,17 @@ begin
   v_avatar_url := nullif(trim(coalesce(p_avatar_url, '')), '');
 
   if v_avatar_url is not null
-     and v_avatar_url not in ('/images/IconoperfilM.webp', '/images/IconoperfilH.webp') then
+     and v_avatar_url not in (
+       '/images/IconoperfilM.webp',
+       '/images/IconoperfilH.webp',
+       '/iconos/icono1.svg',
+       '/iconos/icono2.svg',
+       '/iconos/icono3.svg',
+       '/iconos/icono4.svg',
+       '/iconos/icono5.svg',
+       '/iconos/icono6.svg',
+       '/iconos/icono7.svg'
+     ) then
     if public.storage_path_profile_id(v_avatar_url) is distinct from auth.uid() then
       raise exception 'Avatar no permitido';
     end if;
@@ -8239,3 +8322,366 @@ using (
     )
   )
 );
+
+-- =========================================================
+-- ADMIN AUTOMATICO AL SALIR O SACAR MIEMBROS DEL PISO
+-- Bloque incremental: no borra usuarios, perfiles ni historial.
+-- - La membresia se desactiva con is_active = false y left_at.
+-- - Si no queda admin activo, se promueve al miembro activo mas nuevo.
+-- - Si no queda ningun miembro activo, no se promueve a nadie.
+-- =========================================================
+
+create or replace function public.ensure_house_has_admin(
+  p_house_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_active_admin_count int;
+  v_active_member_count int;
+  v_promoted_member public.house_members%rowtype;
+begin
+  if p_house_id is null then
+    return jsonb_build_object(
+      'status', 'skipped',
+      'reason', 'missing_house_id',
+      'promoted_profile_id', null
+    );
+  end if;
+
+  select count(*)::int
+  into v_active_admin_count
+  from public.house_members hm
+  where hm.house_id = p_house_id
+    and hm.is_active = true
+    and hm.role = 'admin';
+
+  if coalesce(v_active_admin_count, 0) > 0 then
+    return jsonb_build_object(
+      'status', 'admin_exists',
+      'active_admin_count', v_active_admin_count,
+      'promoted_profile_id', null
+    );
+  end if;
+
+  select count(*)::int
+  into v_active_member_count
+  from public.house_members hm
+  where hm.house_id = p_house_id
+    and hm.is_active = true;
+
+  if coalesce(v_active_member_count, 0) = 0 then
+    return jsonb_build_object(
+      'status', 'empty_house',
+      'active_member_count', 0,
+      'promoted_profile_id', null
+    );
+  end if;
+
+  select *
+  into v_promoted_member
+  from public.house_members hm
+  where hm.house_id = p_house_id
+    and hm.is_active = true
+  order by
+    hm.joined_at desc nulls last,
+    hm.created_at desc nulls last,
+    hm.id desc
+  limit 1;
+
+  update public.house_members
+  set
+    role = 'admin',
+    updated_at = now()
+  where id = v_promoted_member.id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    p_house_id,
+    auth.uid(),
+    'house_member',
+    v_promoted_member.profile_id,
+    'admin_auto_promoted',
+    jsonb_build_object(
+      'reason', 'house_had_no_active_admin',
+      'profile_id', v_promoted_member.profile_id,
+      'joined_at', v_promoted_member.joined_at
+    )
+  );
+
+  return jsonb_build_object(
+    'status', 'promoted',
+    'active_member_count', v_active_member_count,
+    'promoted_profile_id', v_promoted_member.profile_id
+  );
+end;
+$$;
+
+
+create or replace function public.remove_house_member(
+  p_house_public_code text,
+  p_profile_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_created_by uuid;
+  v_target public.house_members%rowtype;
+  v_ensure_result jsonb;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  select h.id, h.created_by
+  into v_house_id, v_created_by
+  from public.houses h
+  where h.public_code = trim(p_house_public_code)
+    and h.status = 'active'
+  limit 1;
+
+  if v_house_id is null then
+    raise exception 'Piso no encontrado';
+  end if;
+
+  if not exists (
+    select 1
+    from public.house_members hm
+    where hm.house_id = v_house_id
+      and hm.profile_id = auth.uid()
+      and hm.is_active = true
+      and (
+        hm.role = 'admin'
+        or v_created_by = auth.uid()
+      )
+  ) then
+    raise exception 'Solo un admin activo puede sacar participantes';
+  end if;
+
+  if p_profile_id = auth.uid() then
+    raise exception 'Usa leave_current_house para salir del piso';
+  end if;
+
+  if p_profile_id = v_created_by then
+    raise exception 'No se puede sacar al creador del piso';
+  end if;
+
+  select *
+  into v_target
+  from public.house_members hm
+  where hm.house_id = v_house_id
+    and hm.profile_id = p_profile_id
+    and hm.is_active = true
+  limit 1;
+
+  if v_target.id is null then
+    raise exception 'Participante no encontrado';
+  end if;
+
+  update public.house_members
+  set
+    is_active = false,
+    left_at = now(),
+    updated_at = now()
+  where id = v_target.id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'house_member',
+    p_profile_id,
+    'member_removed',
+    jsonb_build_object(
+      'removed_profile_id', p_profile_id,
+      'previous_role', v_target.role
+    )
+  );
+
+  v_ensure_result := public.ensure_house_has_admin(v_house_id);
+
+  return jsonb_build_object(
+    'status', 'removed_from_house',
+    'profile_id', p_profile_id,
+    'house_id', v_house_id,
+    'admin_check', v_ensure_result
+  );
+end;
+$$;
+
+grant execute on function public.remove_house_member(text, uuid) to authenticated;
+
+
+create or replace function public.leave_current_house(
+  p_house_public_code text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_house_id uuid;
+  v_created_by uuid;
+  v_member public.house_members%rowtype;
+  v_ensure_result jsonb;
+  v_active_member_count int;
+  v_new_creator uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+
+  select h.id, h.created_by
+  into v_house_id, v_created_by
+  from public.houses h
+  join public.house_members hm
+    on hm.house_id = h.id
+   and hm.profile_id = auth.uid()
+   and hm.is_active = true
+  where h.public_code = trim(p_house_public_code)
+    and h.status = 'active'
+  limit 1;
+
+  if v_house_id is null then
+    raise exception 'Piso no encontrado o sin membresia activa';
+  end if;
+
+  select *
+  into v_member
+  from public.house_members hm
+  where hm.house_id = v_house_id
+    and hm.profile_id = auth.uid()
+    and hm.is_active = true
+  limit 1;
+
+  update public.house_members
+  set
+    is_active = false,
+    left_at = now(),
+    updated_at = now()
+  where id = v_member.id;
+
+  insert into public.house_audit_log (
+    house_id,
+    actor_profile_id,
+    entity_type,
+    entity_id,
+    action,
+    details
+  )
+  values (
+    v_house_id,
+    auth.uid(),
+    'house_member',
+    auth.uid(),
+    'member_left',
+    jsonb_build_object(
+      'profile_id', auth.uid(),
+      'previous_role', v_member.role
+    )
+  );
+
+  v_ensure_result := public.ensure_house_has_admin(v_house_id);
+
+  select count(*)::int
+  into v_active_member_count
+  from public.house_members hm
+  where hm.house_id = v_house_id
+    and hm.is_active = true;
+
+  if coalesce(v_active_member_count, 0) = 0 then
+    update public.houses
+    set
+      status = 'archived',
+      updated_at = now()
+    where id = v_house_id;
+
+    insert into public.house_audit_log (
+      house_id,
+      actor_profile_id,
+      entity_type,
+      entity_id,
+      action,
+      details
+    )
+    values (
+      v_house_id,
+      auth.uid(),
+      'house',
+      v_house_id,
+      'archived_empty',
+      jsonb_build_object('reason', 'last_active_member_left')
+    );
+  elsif v_created_by = auth.uid() then
+    select hm.profile_id
+    into v_new_creator
+    from public.house_members hm
+    where hm.house_id = v_house_id
+      and hm.is_active = true
+      and hm.role = 'admin'
+    order by
+      hm.joined_at desc nulls last,
+      hm.created_at desc nulls last,
+      hm.id desc
+    limit 1;
+
+    update public.houses
+    set
+      created_by = v_new_creator,
+      updated_at = now()
+    where id = v_house_id;
+
+    insert into public.house_audit_log (
+      house_id,
+      actor_profile_id,
+      entity_type,
+      entity_id,
+      action,
+      details
+    )
+    values (
+      v_house_id,
+      auth.uid(),
+      'house',
+      v_house_id,
+      'creator_transferred',
+      jsonb_build_object(
+        'previous_creator_profile_id', auth.uid(),
+        'new_creator_profile_id', v_new_creator
+      )
+    );
+  end if;
+
+  return jsonb_build_object(
+    'status', 'left_house',
+    'profile_id', auth.uid(),
+    'house_id', v_house_id,
+    'active_member_count', coalesce(v_active_member_count, 0),
+    'admin_check', v_ensure_result
+  );
+end;
+$$;
+
+grant execute on function public.leave_current_house(text) to authenticated;

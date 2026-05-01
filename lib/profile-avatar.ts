@@ -1,4 +1,6 @@
 export const PROFILE_AVATAR_DEFAULTS = [
+  "/images/IconoperfilM.webp",
+  "/images/IconoperfilH.webp",
   "/iconos/icono1.svg",
   "/iconos/icono2.svg",
   "/iconos/icono3.svg",

@@ -126,10 +126,6 @@ export function AreaGrupalScreen({
     ...item,
     color: PIE_COLORS[index % PIE_COLORS.length],
   }));
-  const activeAdminCount = data.members.filter(
-    (member) => member.role === "admin"
-  ).length;
-
   const canRemoveMember = (member: AreaGrupalDashboardData["members"][number]) => {
     if (!canRemoveMembers || member.profile_id === currentProfileId) {
       return false;
@@ -139,7 +135,7 @@ export function AreaGrupalScreen({
       return false;
     }
 
-    return member.role !== "admin" || activeAdminCount > 1;
+    return true;
   };
 
   const runAction = (action: () => Promise<void>) => {
