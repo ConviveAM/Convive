@@ -12,14 +12,6 @@ const KEYFRAMES = [
   { rotationY: Math.PI * 5, cameraX: 0, cameraY: 3.5, lookAtY: 3.5 }, // S5 delantera
 ];
 
-const SECTION_SELECTORS = [
-  "#landing-section-one",
-  "#landing-section-two",
-  "#landing-section-three",
-  "#landing-section-four",
-  "#landing-section-five",
-];
-
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
@@ -41,6 +33,8 @@ function getValues(progress: number) {
 
 type State = {
   pivot: THREE.Object3D | null;
+  modelWidth: number;
+  cameraDistance: number;
   targetRotationY: number;
   targetCameraX: number;
   targetCameraY: number;
@@ -51,6 +45,8 @@ export default function BuildingScene() {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const stateRef = useRef<State>({
     pivot: null,
+    modelWidth: 20,
+    cameraDistance: 40,
     targetRotationY: KEYFRAMES[0].rotationY,
     targetCameraX: KEYFRAMES[0].cameraX,
     targetCameraY: KEYFRAMES[0].cameraY,
@@ -61,7 +57,6 @@ export default function BuildingScene() {
     const container = mountRef.current;
     if (!container) return;
 
-    // ── Renderer ──────────────────────────────────────────────────────────────
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -72,11 +67,9 @@ export default function BuildingScene() {
     renderer.toneMappingExposure = 1.1;
     container.appendChild(renderer.domElement);
 
-    // ── Scene ─────────────────────────────────────────────────────────────────
     const scene = new THREE.Scene();
     scene.background = null;
 
-    // ── Camera ────────────────────────────────────────────────────────────────
     const camera = new THREE.PerspectiveCamera(
       60,
       container.clientWidth / container.clientHeight,
@@ -84,7 +77,6 @@ export default function BuildingScene() {
       2000
     );
 
-    // ── Lights ────────────────────────────────────────────────────────────────
     scene.add(new THREE.AmbientLight(0xffffff, 2));
     scene.add(new THREE.HemisphereLight(0xdce9ff, 0x8a7a6f, 1));
     const sun = new THREE.DirectionalLight(0xfff5e0, 2.5);
@@ -95,7 +87,6 @@ export default function BuildingScene() {
     fill.position.set(-8, 5, -5);
     scene.add(fill);
 
-    // ── Load GLB ──────────────────────────────────────────────────────────────
     new GLTFLoader().load(
       "/edificio/EdificioProyecto.glb",
       (gltf) => {
@@ -117,6 +108,8 @@ export default function BuildingScene() {
             Math.tan(THREE.MathUtils.degToRad(30)) * camera.aspect
           );
         const dist = (W / 2) / Math.tan(fovH / 2) * 1.8;
+        stateRef.current.modelWidth = W;
+        stateRef.current.cameraDistance = dist;
 
         camera.position.set(KEYFRAMES[0].cameraX, KEYFRAMES[0].cameraY, dist);
         camera.lookAt(KEYFRAMES[0].cameraX, KEYFRAMES[0].lookAtY, 0);
@@ -140,58 +133,38 @@ export default function BuildingScene() {
       (e) => console.error("Error GLB:", e)
     );
 
-    const onScroll = () => {
-      const rawPoints = SECTION_SELECTORS.map((selector) => {
-        const el = document.querySelector(selector) as HTMLElement | null;
-        if (!el) return null;
-        return el.getBoundingClientRect().top + window.scrollY;
-      }).filter((v): v is number => v !== null);
+    let maxScrollStable = 0;
+    let stabilizeTimer: number | null = null;
 
-      // Keep points strictly increasing even with overlapping sections/margins.
-      const sectionPoints = rawPoints.reduce<number[]>((acc, p, i) => {
-        if (i === 0) {
-          acc.push(p);
-        } else {
-          acc.push(Math.max(p, acc[i - 1] + 1));
-        }
-        return acc;
-      }, []);
-
-      let progress = 0;
-      const scrollPos = window.scrollY;
-
-      if (sectionPoints.length >= 2) {
-        if (scrollPos <= sectionPoints[0]) {
-          progress = 0;
-        } else if (scrollPos >= sectionPoints[sectionPoints.length - 1]) {
-          progress = 1;
-        } else {
-          for (let i = 0; i < sectionPoints.length - 1; i++) {
-            const a = sectionPoints[i];
-            const b = sectionPoints[i + 1];
-            if (scrollPos >= a && scrollPos <= b) {
-              const t = (scrollPos - a) / Math.max(1, b - a);
-              progress = (i + t) / (KEYFRAMES.length - 1);
-              break;
-            }
-          }
-        }
-      } else {
-        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-        progress = window.scrollY / maxScroll;
-      }
-
-      progress = THREE.MathUtils.clamp(progress, 0, 1);
+    const computeProgress = () => {
+      const currentMax =
+        document.documentElement.scrollHeight - window.innerHeight;
+      maxScrollStable = Math.max(maxScrollStable, currentMax);
+      const progress = THREE.MathUtils.clamp(
+        window.scrollY / Math.max(1, maxScrollStable),
+        0,
+        1
+      );
       const v = getValues(progress);
       stateRef.current.targetRotationY = v.rotationY;
       stateRef.current.targetCameraX = v.cameraX;
       stateRef.current.targetCameraY = v.cameraY;
       stateRef.current.targetLookAtY = v.lookAtY;
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
 
-    // ── Animation loop ────────────────────────────────────────────────────────
+    const onScroll = () => computeProgress();
+
+    const ro = new ResizeObserver(() => {
+      if (stabilizeTimer) window.clearTimeout(stabilizeTimer);
+      stabilizeTimer = window.setTimeout(() => {
+        computeProgress();
+      }, 50);
+    });
+    ro.observe(document.body);
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    computeProgress();
+
     const LERP = 0.14;
     let raf = 0;
 
@@ -210,20 +183,29 @@ export default function BuildingScene() {
     };
     animate();
 
-    // ── Resize ────────────────────────────────────────────────────────────────
     const onResize = () => {
       const c = mountRef.current;
       if (!c) return;
       camera.aspect = c.clientWidth / c.clientHeight;
+
+      const fovH =
+        2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(30)) * camera.aspect);
+      const dist =
+        (stateRef.current.modelWidth / 2) / Math.tan(fovH / 2) * 1.8;
+      stateRef.current.cameraDistance = dist;
+      camera.position.z = dist;
+      camera.far = dist * 100;
+
       camera.updateProjectionMatrix();
       renderer.setSize(c.clientWidth, c.clientHeight);
-      onScroll();
+      computeProgress();
     };
     window.addEventListener("resize", onResize);
 
-    // ── Cleanup ───────────────────────────────────────────────────────────────
     return () => {
       cancelAnimationFrame(raf);
+      ro.disconnect();
+      if (stabilizeTimer) window.clearTimeout(stabilizeTimer);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
       scene.traverse((n) => {
