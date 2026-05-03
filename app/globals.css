@@ -150,7 +150,7 @@ main {
   inset: 0;
   z-index: 0;
   filter: blur(1.8px) saturate(104%);
-  transform: scale(1.008);
+  transform: none;
   transform-origin: center;
 }
 
