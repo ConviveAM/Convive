@@ -126,19 +126,21 @@ main {
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .landing-hero__building-canvas {
   position: absolute;
   inset: 0;
+  z-index: 0;
 }
 
 .landing-hero__building-overlay-dark {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.24);
   pointer-events: none;
-  z-index: 1;
+  z-index: 3;
 }
 
 .landing-hero__building-overlay-glass {
@@ -149,7 +151,7 @@ main {
   -webkit-backdrop-filter: blur(2.6px) saturate(103%);
   border: 1px solid rgba(255, 255, 255, 0.06);
   pointer-events: none;
-  z-index: 2;
+  z-index: 4;
 }
 
 .landing-hero__building-canvas canvas {
