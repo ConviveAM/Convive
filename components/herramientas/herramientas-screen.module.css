@@ -527,3 +527,15 @@
     min-height: 98px;
   }
 }
+
+@media (min-width: 1200px) {
+  .panel {
+    min-height: calc(100svh - 3rem);
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+
+  .content {
+    align-content: center;
+  }
+}
