@@ -2,11 +2,14 @@
   position: relative;
   width: 100%;
   min-height: 100svh;
+  min-height: 100dvh;
   overflow: hidden;
   background-color: #cfcfcf;
   padding: clamp(0.9rem, 2vw, 1.5rem);
-  display: grid;
-  place-items: center;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .backgroundImage {
@@ -20,7 +23,6 @@
 .panel {
   position: relative;
   z-index: 1;
-  justify-self: center;
   width: calc(100% * 7 / 12);
   max-width: 980px;
   margin-inline: auto;
