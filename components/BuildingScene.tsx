@@ -232,5 +232,11 @@ export default function BuildingScene() {
     };
   }, []);
 
-  return <div className="landing-hero__building-scene" ref={mountRef} />;
+  return (
+    <div className="landing-hero__building-scene">
+      <div className="landing-hero__building-canvas" ref={mountRef} />
+      <div className="landing-hero__building-overlay-dark" aria-hidden="true" />
+      <div className="landing-hero__building-overlay-glass" aria-hidden="true" />
+    </div>
+  );
 }

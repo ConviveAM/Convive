@@ -128,8 +128,12 @@ main {
   overflow: hidden;
 }
 
-.landing-hero__building-scene::before {
-  content: "";
+.landing-hero__building-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.landing-hero__building-overlay-dark {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.2);
@@ -137,8 +141,7 @@ main {
   z-index: 1;
 }
 
-.landing-hero__building-scene::after {
-  content: "";
+.landing-hero__building-overlay-glass {
   position: absolute;
   inset: 0;
   background: rgba(255, 255, 255, 0.028);
@@ -149,7 +152,7 @@ main {
   z-index: 2;
 }
 
-.landing-hero__building-scene canvas {
+.landing-hero__building-canvas canvas {
   display: block;
   position: relative;
   z-index: 0;
