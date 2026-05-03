@@ -610,6 +610,18 @@
   background: transparent;
 }
 
+.avatarImageCustomMain {
+  transform: translateX(-6%) scale(1.2);
+}
+
+.avatarDotButton .avatarImageCustomPicker {
+  transform: scale(0.9);
+  transform-origin: center;
+  clip-path: circle(56% at 50% 50%);
+  -webkit-clip-path: circle(56% at 50% 50%);
+  mix-blend-mode: multiply;
+}
+
 .sectionTitle {
   margin: 0;
   text-align: center;

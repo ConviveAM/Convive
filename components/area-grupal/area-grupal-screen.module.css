@@ -123,6 +123,11 @@
   height: 46px;
 }
 
+.memberAvatarCustom {
+  transform: scale(0.64);
+  transform-origin: center;
+}
+
 .memberDeleteIconButton {
   position: absolute;
   right: -3px;

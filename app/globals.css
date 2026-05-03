@@ -1147,6 +1147,13 @@ main {
     justify-self: center;
   }
 
+  .landing-section-five__content {
+    transform: translate(
+      calc((min(1700px, 100vw) - 2.5rem) / 24 / 2 + 10rem),
+      11rem
+    );
+  }
+
   .landing-section-two__title,
   .landing-section-five__title {
     font-size: clamp(3.2rem, 3vw, 4.2rem);

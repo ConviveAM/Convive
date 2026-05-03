@@ -223,6 +223,7 @@ export function AjustesScreen({
   const visibleCount = Math.min(3, avatarOptions.length);
   const selectedAvatarDisplayUrl =
     avatarOptions[selectedAvatarIndex]?.imageSrc ?? null;
+  const selectedAvatarKind = avatarOptions[selectedAvatarIndex]?.kind ?? "default";
   const profileDisplayName =
     [firstName, lastName].filter(Boolean).join(" ").trim() || "Perfil";
   const trimmedFirstName = firstName.trim();
@@ -632,7 +633,9 @@ export function AjustesScreen({
                         alt="Avatar principal"
                         width={50}
                         height={50}
-                        className={styles.avatarImage}
+                        className={`${styles.avatarImage} ${
+                          selectedAvatarKind === "custom" ? styles.avatarImageCustomMain : ""
+                        }`}
                       />
                       <span className={styles.avatarOverlay} aria-hidden="true">
                         <Image
@@ -756,7 +759,11 @@ export function AjustesScreen({
                             alt=""
                             width={34}
                             height={34}
-                            className={styles.avatarImage}
+                            className={`${styles.avatarImage} ${
+                              avatar.kind === "custom"
+                                ? styles.avatarImageCustomPicker
+                                : ""
+                            }`}
                           />
                         </button>
                       );

@@ -323,6 +323,11 @@ export function AreaGrupalScreen({
                           alt={member.display_name}
                           width={46}
                           height={46}
+                          className={
+                            member.avatar_url && !member.avatar_url.startsWith("/")
+                              ? styles.memberAvatarCustom
+                              : undefined
+                          }
                         />
                         {canRemoveMember(member) ? (
                           <AlertDialog>
