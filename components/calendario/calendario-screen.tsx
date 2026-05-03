@@ -603,7 +603,7 @@ export function CalendarioScreen({
           </Link>
           <div className={styles.headerCenter}>
             <h1 className={styles.title}>Calendario</h1>
-            <p className={styles.subtitle}>Organizacion de eventos y pagos</p>
+            <p className={styles.subtitle}>Organización de eventos y pagos</p>
           </div>
           <span />
         </header>
