@@ -49,8 +49,6 @@ import {
   loadHousePendingPaymentConfirmationsWithClient,
   loadHousePurchaseTicketsHistoryWithClient,
   loadHouseSharedExpensesHistoryWithClient,
-  loadOpenHousePurchaseTicketsWithClient,
-  loadOpenHouseSharedExpensesWithClient,
 } from "../../../../backend/endpoints/gastos/queries";
 import { getSharedExpenseSplitAction } from "../../../../backend/endpoints/gastos/actions";
 import { loadHomeDashboardWithClient } from "../../../../backend/endpoints/home/queries";
@@ -434,7 +432,9 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
     );
   }
 
-  const expensesDashboard = sectionPath.startsWith("gastos")
+  const needsExpensesDashboard =
+    sectionPath === "gastos" || sectionPath.startsWith("gastos/simplificar");
+  const expensesDashboard = needsExpensesDashboard
     ? await loadHouseExpensesDashboardWithClient(
         routeContext.supabase,
         routeContext.house.public_code,
@@ -443,9 +443,9 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
       )
     : null;
   const pendingPaymentConfirmations =
-    sectionPath === "gastos" ||
-    sectionPath === "gastos/division" ||
-    sectionPath === "gastos/validaciones"
+    sectionPath === "gastos"
+    ? expensesDashboard?.pending_payment_confirmations ?? []
+    : sectionPath === "gastos/division" || sectionPath === "gastos/validaciones"
     ? await loadHousePendingPaymentConfirmationsWithClient(
         routeContext.supabase,
         routeContext.house.public_code
@@ -460,19 +460,11 @@ export default async function HouseRoutePage({ params }: HouseRoutePageProps) {
       : [];
   const openHousePurchaseTickets =
     sectionPath === "gastos"
-      ? await loadOpenHousePurchaseTicketsWithClient(
-          routeContext.supabase,
-          routeContext.house.public_code,
-          50
-        )
+      ? expensesDashboard?.tickets ?? []
       : [];
   const openHouseSharedExpenses =
     sectionPath === "gastos"
-      ? await loadOpenHouseSharedExpensesWithClient(
-          routeContext.supabase,
-          routeContext.house.public_code,
-          50
-        )
+      ? expensesDashboard?.shared_expenses ?? []
       : [];
   const ticketsHistory =
     sectionPath === "gastos/tickets"
