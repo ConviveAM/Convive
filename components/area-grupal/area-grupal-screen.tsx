@@ -303,8 +303,8 @@ export function AreaGrupalScreen({
             />
           </Link>
           <div className={styles.headerCenter}>
-            <h1 className={styles.title}>Area grupal</h1>
-            <p className={styles.subtitle}>Organizacion y vida en el piso</p>
+            <h1 className={styles.title}>ÁREA GRUPAL</h1>
+            <p className={styles.subtitle}>Organización y vida en el piso</p>
           </div>
           <span />
         </header>
