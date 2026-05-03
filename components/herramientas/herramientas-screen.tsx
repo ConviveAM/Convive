@@ -135,6 +135,16 @@ export function HerramientasScreen({
 
   return (
     <main className={styles.page}>
+      <Image
+        src="/images/herramientas/fondo.webp"
+        alt=""
+        fill
+        preload
+        sizes="100vw"
+        className={styles.backgroundImage}
+        aria-hidden="true"
+      />
+
       {showCambioModal && (
         <div
           className={styles.cambioModalOverlay}

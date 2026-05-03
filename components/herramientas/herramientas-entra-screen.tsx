@@ -19,6 +19,16 @@ export function HerramientasEntraScreen({
   const basePath = dashboardPath;
   return (
     <main className={styles.page}>
+      <Image
+        src="/images/herramientas/fondo.webp"
+        alt=""
+        fill
+        preload
+        sizes="100vw"
+        className={styles.backgroundImage}
+        aria-hidden="true"
+      />
+
       <section className={styles.panel}>
         <header className={styles.header}>
           <Link href={`${basePath}/menu`} className={styles.backLink}>
