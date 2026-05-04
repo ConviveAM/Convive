@@ -77,8 +77,8 @@ export async function uploadContractDocumentAction(
         upsert: false,
       });
 
-    // Some bucket policies restrict "application/pdf". Retry with a generic
-    // content-type so uploads still work without changing bucket settings.
+    // Some bucket policies restrict PDF mime types. Retry with a mime type
+    // already allowed in the existing private bucket configuration.
     if (
       uploadResult.error?.message?.toLowerCase().includes("mime type") &&
       uploadResult.error.message.toLowerCase().includes("application/pdf")
@@ -86,7 +86,7 @@ export async function uploadContractDocumentAction(
       uploadResult = await supabase.storage
         .from(DOCUMENTS_BUCKET)
         .upload(storagePath, buffer, {
-          contentType: "application/octet-stream",
+          contentType: "image/webp",
           upsert: false,
         });
     }

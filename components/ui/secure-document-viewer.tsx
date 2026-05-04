@@ -31,6 +31,7 @@ export function SecureDocumentViewer({
   const [isOpen, setIsOpen] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   const openDocument = () => {
     if (disabled || isPending) {
@@ -65,8 +66,54 @@ export function SecureDocumentViewer({
   const closeDocument = () => {
     setIsOpen(false);
     setSignedUrl(null);
+    if (pdfBlobUrl) {
+      URL.revokeObjectURL(pdfBlobUrl);
+    }
+    setPdfBlobUrl(null);
     setErrorMessage(null);
   };
+
+  useEffect(() => {
+    if (!isOpen || documentType !== "pdf" || !signedUrl) {
+      return;
+    }
+
+    let cancelled = false;
+    let localBlobUrl: string | null = null;
+
+    const loadPdf = async () => {
+      try {
+        const response = await fetch(signedUrl);
+        if (!response.ok) {
+          throw new Error("No se pudo cargar el contrato.");
+        }
+
+        const buffer = await response.arrayBuffer();
+        const pdfBlob = new Blob([buffer], { type: "application/pdf" });
+        localBlobUrl = URL.createObjectURL(pdfBlob);
+        if (!cancelled) {
+          setPdfBlobUrl(localBlobUrl);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "No se pudo mostrar el contrato."
+          );
+        }
+      }
+    };
+
+    void loadPdf();
+
+    return () => {
+      cancelled = true;
+      if (localBlobUrl) {
+        URL.revokeObjectURL(localBlobUrl);
+      }
+    };
+  }, [isOpen, documentType, signedUrl]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -110,11 +157,11 @@ export function SecureDocumentViewer({
           </button>
           <h2 className={styles.title}>{title}</h2>
         </header>
-        {signedUrl && documentType === "pdf" ? (
+        {documentType === "pdf" && pdfBlobUrl ? (
           <div className={styles.documentWrap}>
-            <iframe src={signedUrl} title={title} className={styles.documentFrame} />
+            <iframe src={pdfBlobUrl} title={title} className={styles.documentFrame} />
           </div>
-        ) : signedUrl ? (
+        ) : signedUrl && documentType !== "pdf" ? (
           <div className={styles.imageWrap}>
             <img src={signedUrl} alt={title} className={styles.image} />
           </div>
