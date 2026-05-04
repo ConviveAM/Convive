@@ -1,7 +1,7 @@
-"use server";
+ï»¿"use server";
 
 import Groq from "groq-sdk";
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import { getAuthenticatedProfileContext } from "../auth/queries";
 import type { ActionResult } from "../shared/action-result";
 import { toActionError } from "../shared/action-result";
@@ -37,9 +37,9 @@ function containsSensitiveIntent(text: string) {
     "iban",
     "cuenta bancaria",
     "numero de cuenta",
-    "número de cuenta",
+    "nÃºmero de cuenta",
     "telefono",
-    "teléfono",
+    "telÃ©fono",
     "firma",
     "firmas",
     "correo",
@@ -139,7 +139,9 @@ export async function askContractQuestionAction(
       return { success: false, error: "El contrato esta vacio." };
     }
 
-    const parsed = await pdfParse(fileBuffer);
+    const parser = new PDFParse({ data: fileBuffer });
+    const parsed = await parser.getText();
+    await parser.destroy();
     const contractText = sanitizeSensitiveData((parsed.text ?? "").trim());
     if (!contractText) {
       return {
@@ -177,3 +179,5 @@ export async function askContractQuestionAction(
     return { success: false, error: toActionError(error) };
   }
 }
+
+
