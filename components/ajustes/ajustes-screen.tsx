@@ -17,10 +17,10 @@ import {
   uploadProfileAvatarAction,
 } from "../../app/backend/endpoints/profile/avatar-actions";
 import {
-  askContractQuestionAction,
   getContractDocumentSignedUrlAction,
   uploadContractDocumentAction,
 } from "../../app/backend/endpoints/profile/contract-actions";
+import { askContractQuestionAction } from "../../app/backend/endpoints/profile/contract-qa-actions";
 import type { ProfileSettingsData } from "../../lib/dashboard-types";
 import { fileToDocumentUploadPayload } from "../../lib/document-upload-client";
 import {
