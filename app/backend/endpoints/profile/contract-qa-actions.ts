@@ -138,11 +138,8 @@ export async function askContractQuestionAction(
       return { success: false, error: "El contrato esta vacio." };
     }
 
-    const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: fileBuffer });
-    const parsed = await parser.getText();
-    await parser.destroy();
-
+    const { default: pdfParse } = await import("pdf-parse");
+    const parsed = await pdfParse(fileBuffer);
     const contractText = sanitizeSensitiveData((parsed.text ?? "").trim());
     if (!contractText) {
       return {
