@@ -22,6 +22,7 @@
 }
 
 .header {
+  position: relative;
   background: #8b1a2f;
   color: #f0eae4;
   padding: 1rem 1.1rem;
@@ -31,6 +32,9 @@
 }
 
 .headerContractButton {
+  position: relative;
+  z-index: 5;
+  pointer-events: auto;
   min-height: 28px;
   border: none;
   border-radius: 8px;
@@ -56,6 +60,9 @@
 }
 
 .contractHeaderActions {
+  position: relative;
+  z-index: 5;
+  pointer-events: auto;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
