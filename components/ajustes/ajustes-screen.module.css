@@ -1,0 +1,1133 @@
+.page {
+  min-height: 100svh;
+  background-image: url("/images/perfil/fondo.webp");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  padding: clamp(0.75rem, 2vw, 1.4rem);
+  display: grid;
+  place-items: center;
+}
+
+.panel {
+  width: calc(100% * 10 / 12);
+  max-width: 1520px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: color-mix(in srgb, #f0eae4 40%, transparent);
+  border: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.28);
+}
+
+.header {
+  position: relative;
+  background: #8b1a2f;
+  color: #f0eae4;
+  padding: 1rem 1.1rem;
+  min-height: 118px;
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+}
+
+.headerContractButton {
+  position: relative;
+  z-index: 5;
+  pointer-events: auto;
+  min-height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #be6f8b;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+  padding: 0.38rem 0.62rem;
+  justify-self: end;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease, filter 0.15s ease;
+}
+
+.headerContractButton:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  filter: brightness(1.03);
+}
+
+.headerContractButton:active {
+  transform: translateY(1px);
+}
+
+.headerContractButtonCompact {
+  width: 128px;
+  white-space: nowrap;
+}
+
+.headerContractButtonWide {
+  width: 170px;
+}
+
+.contractHeaderActions {
+  position: relative;
+  z-index: 5;
+  pointer-events: auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+}
+
+.contractAssistantPopover {
+  width: min(460px, calc(100vw - 2rem));
+  background: #f0eae4;
+  border: 1px dotted #8b1a2f;
+  border-radius: 8px;
+  padding: 0.85rem;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.2);
+}
+
+.contractAssistantPanel {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.contractAssistantTitle {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.contractAssistantTextarea {
+  width: 100%;
+  border: 1px solid rgba(139, 26, 47, 0.35);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.84rem;
+  color: #2f2a27;
+  background: #f8f5f2;
+  resize: vertical;
+  min-height: 78px;
+}
+
+.contractAssistantTextarea:focus-visible {
+  outline: none;
+  border-color: #8b1a2f;
+  box-shadow: 0 0 0 1px rgba(139, 26, 47, 0.25);
+}
+
+.contractAssistantButton {
+  justify-self: start;
+  border: none;
+  border-radius: 8px;
+  background: #be6f8b;
+  color: #f0eae4;
+  padding: 0.42rem 0.85rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.contractAssistantButton:disabled {
+  opacity: 0.72;
+  cursor: default;
+}
+
+.contractAssistantError {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.76rem;
+}
+
+.contractAssistantAnswer {
+  margin: 0.1rem 0 0;
+  color: #2f2a27;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.contractAssistantEmpty {
+  margin: 0;
+  color: #5f5852;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.backLink {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+}
+
+.backIcon {
+  width: 44px;
+  height: 44px;
+}
+
+.headerCenter {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  color: #f0eae4;
+  text-transform: uppercase;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: clamp(1.45rem, 1.6vw, 1.85rem);
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.95rem;
+}
+
+.content {
+  padding: 1.6rem 1.05rem 1.05rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.topGrid {
+  margin-top: 1.1rem;
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.leaveHouseWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.35rem;
+}
+
+.leaveHouseButton {
+  min-height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: #be6f8b;
+  color: #f0eae4;
+  padding: 0.42rem 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: normal;
+  cursor: pointer;
+}
+
+.leaveHouseIcon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  filter: brightness(0) invert(1);
+}
+
+.block {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
+}
+
+.personalBlock {
+  background: #8b1a2f;
+  padding: 0.8rem 0.75rem;
+}
+
+.profileBlock,
+.houseBlock {
+  background: #f2eeeb;
+}
+
+.profileBlock {
+  position: relative;
+  padding: 1.2rem 1rem 0.95rem;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  row-gap: 1.5rem;
+}
+
+.houseBlock {
+  background: #8b1a2f;
+  padding: 1.05rem 1rem 1rem;
+  display: grid;
+  align-content: start;
+}
+
+@media (min-width: 961px) {
+  .personalBlock,
+  .profileBlock,
+  .houseBlock {
+    height: 270px;
+  }
+
+  .avatarDotButton {
+    width: 52px;
+    height: 52px;
+  }
+
+  .avatarDotButton img {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+.appBlock {
+  background: #8b1a2f;
+  color: #f0eae4;
+  padding: 0.95rem 1rem 1.1rem;
+}
+
+.blockTitle {
+  margin: 0;
+  color: #f0eae4;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.personalFields {
+  margin-top: 0.8rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.inputLike {
+  min-height: 32px;
+  border-radius: 7px;
+  border: 1px solid #be6f8b;
+  background: #f2eeeb;
+  padding: 0.35rem 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  color: #3d3733;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.8rem;
+}
+
+.editButton {
+  border: 1px solid #be6f8b;
+  background: transparent;
+  color: #8b1a2f;
+  border-radius: 999px;
+  min-width: 44px;
+  height: 20px;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.66rem;
+  padding: 0 0.45rem;
+}
+
+.inlineInput,
+.settingInput,
+.settingSelect,
+.memberSelect {
+  min-width: 0;
+  width: auto;
+  flex: 1 1 auto;
+  border: none;
+  background: transparent;
+  color: #3d3733;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.settingInputWithIcon {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.settingInputWithIcon .settingInput {
+  padding-right: 1.6rem;
+}
+
+.settingInputIcon {
+  position: absolute;
+  right: 0.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.settingSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath d='M3 5l4 4 4-4' fill='none' stroke='%238b1a2f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 0.1rem) center;
+  background-size: 14px 14px;
+  padding-right: 1.2rem;
+}
+
+.settingSelect::-ms-expand {
+  display: none;
+}
+
+.fieldLabel {
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.66rem;
+  font-weight: 600;
+  white-space: nowrap;
+  order: -1;
+  margin-left: 0;
+  margin-right: 0.45rem;
+  text-align: left;
+}
+
+.saveButton,
+.houseSaveButton {
+  margin-top: 0.7rem;
+  min-height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: #be6f8b;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  padding: 0.35rem 0.85rem;
+}
+
+.actionSlot {
+  margin-top: 0.7rem;
+  min-height: 30px;
+  display: grid;
+  align-items: center;
+}
+
+.hiddenActionButton {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.saveButton:disabled,
+.houseSaveButton:disabled {
+  opacity: 0.7;
+}
+
+.saveButton {
+  margin-top: 0;
+  justify-self: center;
+  display: block;
+  margin-inline: auto;
+}
+
+.avatarBadge {
+  position: absolute;
+  top: -14px;
+  border: 10px solid #f2eeeb;
+  border-radius: 999px;
+  background: transparent;
+  width: 66px;
+  height: 66px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.avatarBadgeButton {
+  position: absolute;
+  top: -14px;
+  width: 66px;
+  height: 66px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.avatarBadge img {
+  border-radius: 999px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: translateX(-6%) scale(1.65);
+  transform-origin: center;
+}
+
+.avatarImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+  transform: translateX(-6%) scale(1.65);
+  transform-origin: center;
+}
+
+.avatarImageFallback {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(139, 26, 47, 0.18);
+}
+
+.avatarOverlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.38);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.avatarBadge:hover .avatarOverlay {
+  opacity: 1;
+}
+
+.avatarOverlayIcon {
+  width: 20px !important;
+  height: 20px !important;
+  filter: brightness(0) saturate(100%) invert(100%);
+}
+
+.avatarUploadPopover {
+  width: min(460px, calc(100vw - 2rem));
+  background: #f0eae4;
+  border: 1px dotted #8b1a2f;
+  border-radius: 8px;
+  padding: 0;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.avatarDropzone {
+  min-height: 220px;
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  row-gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.avatarDropzoneActive {
+  background: rgba(139, 26, 47, 0.06);
+}
+
+.avatarDropIcon {
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.avatarDropTitle {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.avatarDropHint {
+  margin: 0;
+  color: #736d68;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.avatarUploadInput {
+  display: none;
+}
+
+.avatarFileName,
+.avatarUploadError,
+.avatarUploadSuccess {
+  margin: 0.2rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.avatarFileName {
+  color: #8b1a2f;
+}
+
+.avatarUploadError {
+  color: #8b1a2f;
+}
+
+.avatarUploadSuccess {
+  color: #2f6846;
+}
+
+.avatarDeleteButton {
+  display: block;
+  width: calc(100% - 2rem);
+  margin: 0.75rem auto 1rem;
+  border: 1px solid #8b1a2f;
+  border-radius: 8px;
+  background: transparent;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+}
+
+.avatarDeleteButton:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.avatarStatus,
+.avatarStatusError {
+  margin: -0.85rem 0 0;
+  min-height: 14px;
+  color: #2f6846;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.avatarStatusError {
+  color: #8b1a2f;
+}
+
+.profileName {
+  margin: 0;
+  width: 100%;
+  justify-self: center;
+  text-align: center;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  line-height: 1.05;
+  font-weight: 800;
+}
+
+.avatarRow {
+  margin-top: 0.1rem;
+  width: fit-content;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: 0.15rem;
+  margin-inline: auto;
+}
+
+.navArrow {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.navArrowIcon {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.navArrowIconRight {
+  transform: rotate(180deg);
+}
+
+.avatarList {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.avatarSliderBox {
+  width: auto;
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+}
+
+.avatarDotButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0.85;
+  transform: scale(0.96);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.avatarDotButtonActive {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.avatarDotButton img {
+  width: 42px;
+  height: 42px;
+  border: none;
+  background: transparent;
+  /* Hide baked-in white/pink ring from avatar assets, keep only center icon */
+  clip-path: circle(56% at 50% 50%);
+  -webkit-clip-path: circle(56% at 50% 50%);
+  mix-blend-mode: multiply;
+}
+
+.avatarDotButton .avatarImage,
+.avatarDotButton .avatarImageFallback {
+  border: none;
+  background: transparent;
+}
+
+.avatarImageCustomMain {
+  transform: translateX(-6%) scale(1.2);
+}
+
+.avatarDotButton .avatarImageCustomPicker {
+  transform: scale(0.9);
+  transform-origin: center;
+  clip-path: circle(56% at 50% 50%);
+  -webkit-clip-path: circle(56% at 50% 50%);
+  mix-blend-mode: multiply;
+}
+
+.sectionTitle {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.houseBlock .sectionTitle {
+  color: #f0eae4;
+  font-weight: 700;
+}
+
+.appBlock .sectionTitle {
+  color: #f0eae4;
+}
+
+.settingRow {
+  margin-top: 0.55rem;
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid #be6f8b;
+  background: #f2eeeb;
+  display: grid;
+  grid-template-columns: minmax(100px, 0.45fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.45rem;
+}
+
+.houseBlock .sectionTitle + .settingRow {
+  margin-top: 0.8rem;
+}
+
+.deleteParticipantButton {
+  margin-top: 0.8rem;
+  margin-inline: auto;
+  min-height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: #be6f8b;
+  color: #f0eae4;
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  line-height: normal;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  padding: 0.35rem 0.95rem;
+}
+
+.stayInputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.45rem;
+}
+
+.settingHint,
+.feedbackMessage {
+  margin: 0.45rem 0 0;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.houseSaveButton {
+  margin-top: 0;
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  margin-inline: auto;
+}
+
+.memberSelect {
+  margin-top: 0.85rem;
+  border: 1px solid #be6f8b;
+  border-radius: 8px;
+  background: #f2eeeb;
+  padding: 0.45rem 0.55rem;
+}
+
+.settingLabel,
+.settingValue {
+  color: #3d3733;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.84rem;
+}
+
+.houseBlock .settingLabel {
+  color: rgb(139, 26, 47);
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+  white-space: nowrap;
+}
+
+.houseBlock .settingRow {
+  grid-template-columns: minmax(170px, 0.62fr) minmax(0, 1fr);
+}
+
+.settingLabel {
+  font-weight: 600;
+}
+
+.settingValue {
+  font-weight: 500;
+}
+
+.settingDateTrigger {
+  width: 100%;
+  min-height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #3d3733;
+  justify-content: space-between;
+  padding: 0 0.1rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.settingDateTrigger:hover,
+.settingDateTrigger:focus,
+.settingDateTrigger:focus-visible,
+.settingDateTrigger:active {
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.settingSelect:hover,
+.settingSelect:focus,
+.settingSelect:focus-visible,
+.settingSelect:active {
+  background-color: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+.dateArrow {
+  width: 14px;
+  height: 14px;
+  transform: rotate(-90deg);
+  display: block;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.calendarPopover {
+  background: #f0ebe6;
+  border: 1px solid #d8d0cb;
+  border-radius: 8px;
+  padding: 0.45rem;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+}
+
+.calendar {
+  margin: 0;
+}
+
+.appSettings {
+  margin-top: 1.9rem;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.notifications {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  text-align: center;
+  width: max-content;
+  justify-self: start;
+  align-self: center;
+}
+
+.notifications span {
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #f0eae4;
+}
+
+.toggle {
+  width: 46px;
+  min-width: 46px;
+  max-width: 46px;
+  height: 20px;
+  min-height: 20px;
+  max-height: 20px;
+  border-radius: 999px;
+  border: 1px solid #e6c8d2;
+  background: #f0eae4;
+  padding: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.toggle span {
+  width: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  height: 16px;
+  min-height: 16px;
+  max-height: 16px;
+  border-radius: 999px;
+  background: #8b1a2f;
+  box-sizing: border-box;
+}
+
+.appButton {
+  min-height: 33px;
+  border: none;
+  border-radius: 8px;
+  background: #be6f8b;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.95rem;
+  white-space: nowrap;
+}
+
+.appButton:first-of-type {
+  justify-self: center;
+}
+
+.appButton:last-of-type {
+  justify-self: end;
+}
+
+.notifications {
+  align-self: center;
+}
+
+@media (max-width: 960px) {
+  .panel {
+    width: min(100%, 650px);
+  }
+
+  .topGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .appSettings {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .appButton {
+    width: 100%;
+    white-space: normal;
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    align-items: start;
+  }
+
+  .panel {
+    margin-top: 0.4rem;
+  }
+
+  .content {
+    padding: 0.7rem;
+  }
+
+  .header {
+    padding: 0.85rem 0.7rem;
+    grid-template-columns: 30px 1fr auto;
+  }
+
+  .backLink {
+    width: 56px;
+    height: 56px;
+    justify-self: start;
+    transform: translateX(-0.8rem);
+  }
+
+  .backIcon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .headerContractButton {
+    min-height: 34px;
+    font-size: 0.72rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .headerContractButtonCompact {
+    width: 112px;
+  }
+
+  .headerContractButtonWide {
+    width: 148px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .profileBlock {
+    padding-top: 1.65rem;
+    row-gap: 1.1rem;
+  }
+
+  .avatarBadge {
+    top: -10px;
+    width: 50px;
+    height: 50px;
+    border-width: 7px;
+  }
+
+  .avatarBadgeButton {
+    top: -10px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .avatarBadge img {
+    width: 100%;
+    height: 100%;
+  }
+
+  .profileName {
+    margin-top: 0.35rem;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .sectionTitle {
+    font-size: 1rem;
+  }
+
+  .settingRow {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .appSettings {
+    grid-template-columns: auto auto;
+    grid-template-areas:
+      "notifications contract"
+      "liquidacion liquidacion";
+    justify-content: center;
+    align-items: center;
+    column-gap: 0.3rem;
+    row-gap: 0.95rem;
+  }
+
+  .notifications {
+    grid-area: notifications;
+    justify-self: start;
+  }
+
+  .appButton:first-of-type {
+    grid-area: liquidacion;
+    width: min(100%, 280px);
+    text-align: center;
+    justify-self: center;
+  }
+
+  .appButton:last-of-type {
+    grid-area: contract;
+    width: auto;
+    min-height: 28px;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.78rem;
+    text-align: center;
+    justify-self: start;
+    white-space: nowrap;
+  }
+}

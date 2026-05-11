@@ -1,0 +1,575 @@
+.page {
+  min-height: 100svh;
+  background-image: url("/images/Gastos/gastos.webp");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  padding: clamp(0.9rem, 1.8vw, 1.5rem);
+  display: grid;
+  place-items: center;
+}
+
+.panel {
+  width: calc(100% * 7 / 12);
+  max-width: 980px;
+  background: rgba(240, 234, 228, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  border: none;
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+}
+
+.header {
+  background: #8b1a2f;
+  color: #f0eae4;
+  padding: 1.05rem 0.95rem;
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  align-items: center;
+}
+
+.backLink {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+}
+
+.backIcon {
+  width: 44px;
+  height: 44px;
+}
+
+.headerCenter {
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 25px;
+  font-weight: 700;
+  color: #f0eae4;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 0.3rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #f0eae4;
+}
+
+.headerPlusIcon {
+  width: 34px;
+  height: 34px;
+}
+
+.headerPlusLink {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content {
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.maroonSection {
+  border-radius: 8px;
+  border: none;
+  background: #8b1a2f;
+  padding: 0.7rem 0.8rem 0.82rem;
+}
+
+.ticketsSection {
+  --sheet-footer-height: 34px;
+  --sheet-overlay-safe-space: 16px;
+  position: relative;
+  overflow: hidden;
+  padding-top: 1.02rem;
+  padding-bottom: calc(var(--sheet-footer-height) + 0.45rem);
+  height: auto;
+}
+
+.ticketsFooter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--sheet-footer-height);
+  background: #8b1a2f;
+  box-shadow: 0 -8px 12px rgba(0, 0, 0, 0.22);
+  z-index: 8;
+  border-radius: 0 0 8px 8px;
+  pointer-events: none;
+}
+
+.divisionSection {
+  --sheet-footer-height: 26px;
+  --sheet-overlay-safe-space: 14px;
+  position: relative;
+  overflow: hidden;
+  padding-top: 1.02rem;
+  padding-bottom: calc(var(--sheet-footer-height) + 0.45rem);
+  height: auto;
+}
+
+.divisionFooter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--sheet-footer-height);
+  background: #8b1a2f;
+  box-shadow: 0 -8px 12px rgba(0, 0, 0, 0.22);
+  z-index: 8;
+  border-radius: 0 0 8px 8px;
+  pointer-events: none;
+}
+
+.sectionTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.simpleTop {
+  align-items: flex-start;
+}
+
+.simpleTop .viewAll {
+  margin-top: 0.1rem;
+}
+
+.sectionTitleWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.plusLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plusIcon {
+  width: 24px;
+  height: 24px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: #f0eae4;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.viewAll {
+  color: #f0eae4;
+  text-decoration: none;
+  font-family: "Poppins", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.viewAllContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.viewAllArrow {
+  width: 20px;
+  height: 20px;
+  transform: rotate(180deg);
+}
+
+.viewAllRed {
+  color: #8b1a2f;
+}
+
+.viewAllRed .viewAllArrow {
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%) hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.innerPaper {
+  margin-top: 0.55rem;
+  border-radius: 2px;
+  background: #f0ebe6;
+  border: 1px solid #d8d0cb;
+  box-shadow: 8px -4px 0 rgba(240, 235, 230, 0.9);
+  padding: 0.55rem 0.7rem;
+}
+
+.ticketsPaper {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  width: calc(100% - 14px);
+  margin-inline: auto;
+  min-height: 0;
+  border-radius: 0;
+  border: 1px solid #bf778a;
+  box-shadow: none;
+  transform: none !important;
+  margin-top: 1.8rem;
+  margin-bottom: 0;
+  padding: 0.72rem 0.95rem
+    calc(0.8rem + var(--sheet-overlay-safe-space));
+  z-index: 3;
+  margin-bottom: calc(
+    -1 * (var(--sheet-footer-height) - var(--sheet-overlay-safe-space))
+  );
+}
+
+.ticketsPaper::before,
+.ticketsPaper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #f0ebe6;
+  border: 1px solid #bf778a;
+  border-radius: 0;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.ticketsPaper::before {
+  transform: translate(8px, -6px) rotate(0.7deg);
+  transform-origin: top left;
+  z-index: -1;
+}
+
+.ticketsPaper::after {
+  transform: translate(14px, -10px) rotate(0deg);
+  z-index: -2;
+}
+
+.ticketsPaper .innerRow + .innerRow {
+  margin-top: 1.6rem;
+}
+
+.divisionPaper {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  width: calc(100% - 14px);
+  margin-inline: auto;
+  min-height: 0;
+  border-radius: 0;
+  border: 1px solid #bf778a;
+  box-shadow: none;
+  transform: none !important;
+  margin-top: 1.8rem;
+  margin-bottom: 0;
+  padding: 0.72rem 0.95rem
+    calc(1.05rem + var(--sheet-overlay-safe-space));
+  z-index: 3;
+  margin-bottom: calc(
+    -1 * (var(--sheet-footer-height) - var(--sheet-overlay-safe-space))
+  );
+}
+
+.divisionPaper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #f0ebe6;
+  border: 1px solid #bf778a;
+  border-radius: 0;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.divisionPaper::before {
+  transform: translate(8px, -6px) rotate(0.7deg);
+  transform-origin: top left;
+  z-index: -1;
+}
+
+.divisionPaper .innerRow + .innerRow {
+  margin-top: 1.15rem;
+}
+
+.innerRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.innerRow + .innerRow {
+  margin-top: 0.5rem;
+}
+
+.leftInfo {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.ticketLeftInfo {
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.mainText {
+  margin: 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.subText {
+  margin: 0.04rem 0 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.metaText {
+  margin: 0.04rem 0 0;
+  color: #3a3532;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.amount {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.actionButton {
+  background: #be6f8b;
+  color: #f0eae4;
+  border-radius: 8px;
+  padding: 0.52rem 0.95rem;
+  font-size: 14px;
+  line-height: 1;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.simpleCard {
+  border-radius: 8px;
+  border: none;
+  background: #f0ebe6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  padding: 0.82rem 0.9rem;
+}
+
+.simpleTitle {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.simpleSub {
+  margin: 0.2rem 0 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+}
+
+.payRows {
+  margin-top: 0.7rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.payRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  flex-wrap: wrap;
+}
+
+.personTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+}
+
+.smallAmount {
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pendingBadge {
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.emptyState {
+  margin: 0;
+  color: #3a3532;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .panel {
+    width: min(100%, 650px);
+  }
+
+  .sectionTitle,
+  .simpleTitle {
+    font-size: 20px;
+  }
+
+  .amount {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    align-items: start;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .backLink {
+    justify-self: start;
+    transform: translateX(-0.8rem);
+  }
+
+  .sectionTop {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .simpleTop {
+    align-items: flex-start;
+  }
+
+  .sectionTitle {
+    font-size: 17px;
+    line-height: 1.1;
+  }
+
+  .viewAll {
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .plusIcon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .innerRow,
+  .payRow {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  .ticketsPaper .innerRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .ticketsPaper .actionButton {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .divisionPaper .innerRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .divisionPaper .actionButton {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .divisionPaper .innerRow:nth-of-type(n + 2) {
+    display: none;
+  }
+
+  .divisionSection {
+    height: auto;
+    padding-top: 0.8rem;
+    padding-bottom: calc(var(--sheet-footer-height) + 0.3rem);
+  }
+
+  .divisionFooter {
+    height: 16px;
+  }
+
+  .divisionPaper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    margin-top: 1rem;
+    padding: 0.6rem 0.78rem 0.72rem;
+  }
+
+  .divisionPaper .innerRow:first-of-type {
+    width: min(100%, 290px);
+    justify-self: center;
+    margin-inline: auto;
+    margin-top: 0;
+  }
+
+  .amount {
+    font-size: 20px;
+  }
+
+  .simpleTitle {
+    font-size: 17px;
+    line-height: 1.1;
+  }
+}
+
+@media (min-width: 1024px) {
+  .headerPlusLink {
+    margin-right: 36px;
+  }
+}

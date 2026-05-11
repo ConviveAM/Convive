@@ -1,0 +1,685 @@
+.page {
+  min-height: 100svh;
+  background-image: url("/images/Area-grupal/fondo.webp");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  padding: clamp(0.9rem, 1.8vw, 1.5rem);
+  display: grid;
+  place-items: center;
+}
+
+.panel {
+  width: calc(100% * 7 / 12);
+  max-width: 980px;
+  background: rgba(240, 234, 228, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  border: none;
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+}
+
+.header {
+  background: #8b1a2f;
+  color: #f0eae4;
+  padding: 1.05rem 0.95rem;
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  align-items: center;
+}
+
+.backLink {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+}
+
+.backIcon {
+  width: 44px;
+  height: 44px;
+}
+
+.headerCenter {
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 25px;
+  font-weight: 700;
+  color: #f0eae4;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 0.3rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #f0eae4;
+}
+
+.content {
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.membersCard {
+  background: #8b1a2f;
+  color: #f0eae4;
+  border-radius: 8px;
+  border: none;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.inviteBox {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-montserrat), sans-serif;
+  text-transform: uppercase;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.membersRow {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.emptyInline {
+  margin: 0.75rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+}
+
+.memberItem {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  font-size: 12px;
+  font-family: "Poppins", sans-serif;
+}
+
+.memberAvatarWrap {
+  position: relative;
+  width: 46px;
+  height: 46px;
+}
+
+.memberAvatarCustom {
+  transform: scale(0.64);
+  transform-origin: center;
+}
+
+.memberDeleteIconButton {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.memberDeleteIconButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.memberDeleteIcon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  filter: brightness(0) invert(1);
+}
+
+.code {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.codeLabel {
+  display: inline;
+}
+
+.codeValue {
+  display: inline;
+  margin-left: 0.25rem;
+  font-weight: 700;
+}
+
+.inviteLink {
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.gridTwo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.whiteCard {
+  background: #f0ebe6;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  padding: 0.65rem 0.75rem;
+}
+
+.shoppingCard {
+  max-height: 200px;
+  height: auto;
+}
+
+.shoppingCard {
+  display: flex;
+  flex-direction: column;
+}
+
+.fundsCard {
+  height: auto;
+}
+
+.whiteTitle {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clearListButton {
+  border: none;
+  border-radius: 10px;
+  background: #be6f8b;
+  color: #f0eae4;
+  min-height: 30px;
+  padding: 0.35rem 0.75rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: normal;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.clearListButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.shoppingList {
+  margin-top: 0.45rem;
+  display: grid;
+  gap: 0.28rem;
+  flex: 1;
+  min-height: 0;
+  max-height: 128px;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.shoppingList:hover {
+  scrollbar-color: #8b1a2f transparent;
+}
+
+.shoppingList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.shoppingList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.shoppingList::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.shoppingList:hover::-webkit-scrollbar-thumb {
+  background: #8b1a2f;
+}
+
+.shoppingItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.shoppingLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  color: #1f1a17;
+  min-width: 0;
+}
+
+.shoppingLabel span {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.shoppingTextChecked {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+.checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1px solid #8b1a2f;
+  border-radius: 2px;
+}
+
+.checkbox[data-state="checked"] {
+  background: #8b1a2f;
+}
+
+.addRow {
+  margin-top: 0.55rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.newInput {
+  height: 30px;
+  border: 1px solid #8b1a2f;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0 0.5rem;
+  font-size: 12px;
+}
+
+.addItemButton {
+  border: none;
+  background: transparent;
+  color: #8b1a2f;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.addItemButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.plusSmall {
+  color: #8b1a2f;
+}
+
+.deleteItemButton {
+  border: none;
+  background: transparent;
+  color: #8b1a2f;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.deleteItemButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.moneyRows {
+  margin-top: 0.45rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.moneyRows p {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+}
+
+.moneyRows strong {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.budgetAmount {
+  color: #8b1a2f;
+}
+
+.spentAmount {
+  color: #8b1a2f;
+}
+
+.spentAmountOver {
+  color: #8b1a2f;
+}
+
+.progressRoot {
+  margin-top: 0.65rem;
+  position: relative;
+  height: 12px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid #8b1a2f;
+  background: #f0ebe6;
+}
+
+.progressRoot [data-slot="progress-indicator"] {
+  height: 100%;
+  background: #8b1a2f;
+  transition: transform 300ms;
+}
+
+.budgetEditor {
+  margin-top: 0.65rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.budgetInputWrap {
+  position: relative;
+  height: 30px;
+  border: 1px solid #8b1a2f;
+  border-radius: 8px;
+  background: transparent;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.budgetInput {
+  height: 100%;
+  width: 100%;
+  border: 0 !important;
+  background: transparent;
+  padding: 0 1.7rem 0 0.5rem;
+  font-size: 12px;
+  box-shadow: none !important;
+}
+
+.budgetEuroIcon {
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  display: block;
+  pointer-events: none;
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%)
+    hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.budgetSaveButton {
+  min-height: 30px;
+  padding: 0.2rem 0.65rem;
+  background: #be6f8b;
+  color: #f0eae4;
+  width: auto;
+  min-width: 96px;
+  justify-self: start;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.maroonCard {
+  background: #8b1a2f;
+  color: #f0eae4;
+  border: none;
+  border-radius: 8px;
+  padding: 0.8rem 0.9rem;
+}
+
+.maroonTitle {
+  margin: 0;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.monthValue {
+  margin: 0.75rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.monthMeta {
+  margin: 0.2rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+}
+
+.chartWrap {
+  margin-top: 0.4rem;
+  border-top: 1px solid rgba(240, 234, 228, 0.5);
+  padding-top: 0.4rem;
+}
+
+.pieRow {
+  margin-top: 0.35rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.45rem;
+  align-items: center;
+  min-height: 160px;
+}
+
+.legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.24rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.legend span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.compareList {
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+  max-height: 165px;
+  overflow-y: scroll;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: #8b1a2f transparent;
+}
+
+.compareList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.compareList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.compareList::-webkit-scrollbar-thumb {
+  background: #8b1a2f;
+  border-radius: 999px;
+}
+
+.compareList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.compareEmpty {
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  color: #5a5652;
+}
+
+.compareLeft {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.compareLeft p {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  color: #1f1a17;
+}
+
+.compareLeft small {
+  color: #5a5652;
+  font-size: 11px;
+  white-space: pre-line;
+}
+
+.compareRight {
+  display: inline-flex;
+  gap: 0.2rem;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 78px;
+  color: #8b1a2f;
+}
+
+.compareRight strong {
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.compareRight svg {
+  width: 18px;
+  height: 18px;
+}
+
+.arrowSlot {
+  width: 18px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.feedbackMessage {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  color: #8b1a2f;
+  font-weight: 600;
+}
+
+.successMessage {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  color: #2f7a43;
+  font-weight: 600;
+}
+
+.emptyState {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  color: #5a5652;
+}
+
+@media (max-width: 900px) {
+  .panel {
+    width: min(100%, 650px);
+  }
+
+  .gridTwo {
+    grid-template-columns: 1fr;
+  }
+
+  .shoppingCard,
+  .fundsCard {
+    height: auto;
+  }
+
+  .shoppingList {
+    max-height: 162px;
+  }
+}
+
+@media (max-width: 640px) {
+  .title {
+    font-size: 22px;
+  }
+
+  .code {
+    display: grid;
+    gap: 0.08rem;
+    text-align: right;
+  }
+
+  .codeLabel,
+  .codeValue {
+    display: block;
+    margin-left: 0;
+    white-space: nowrap;
+  }
+}

@@ -1,0 +1,674 @@
+.page {
+  min-height: 100svh;
+  background-image: url("/images/Area-personal/areapersonal.webp");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  padding: clamp(0.9rem, 1.8vw, 1.5rem);
+  display: grid;
+  justify-items: center;
+  align-items: center;
+}
+
+.panel {
+  width: calc(100% * 7 / 12);
+  max-width: 980px;
+  background: rgba(240, 234, 228, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  border: none;
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+}
+
+.header {
+  background: #8b1a2f;
+  color: #f0eae4;
+  padding: 1.05rem 0.95rem;
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  align-items: center;
+}
+
+.backLink {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+}
+
+.backIcon {
+  width: 44px;
+  height: 44px;
+}
+
+.headerCenter {
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 25px;
+  font-weight: 700;
+  color: #f0eae4;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  margin: 0.3rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #f0eae4;
+}
+
+.content {
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.feedbackMessage {
+  margin: 0;
+  border-radius: 6px;
+  background: #f0ebe6;
+  color: #8b1a2f;
+  padding: 0.6rem 0.8rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.summaryCard {
+  background: #8b1a2f;
+  color: #f0eae4;
+  border-radius: 6px;
+  padding: 0.62rem 0.6rem 0.72rem;
+  min-height: 136px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.summaryTitle {
+  margin: 0;
+  border-bottom: 1px solid rgba(240, 234, 228, 0.6);
+  padding-bottom: 0.25rem;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: clamp(1rem, 1.25vw, 1.2rem);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.summaryValue {
+  margin: 1.08rem 0 0;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(1.6rem, 2.2vw, 2.1rem);
+  line-height: 1;
+  font-weight: 600;
+}
+
+.summaryMeta {
+  margin: 0;
+  padding-top: 1.14rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.sectionCard {
+  border-radius: 6px;
+  background: #f0ebe6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  padding: 1rem 1rem 1.15rem;
+}
+
+.sectionHeader {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.rows {
+  margin-top: 0.78rem;
+  display: grid;
+  gap: 0.92rem;
+}
+
+.debtsRows {
+  --debt-row-height: 50px;
+  max-height: calc((var(--debt-row-height) * 2) + 0.32rem);
+  overflow-y: auto;
+  padding-right: 0;
+  gap: 0.32rem;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+  margin-right: -0.08rem;
+}
+
+.debtsRows:hover {
+  scrollbar-color: #8b1a2f transparent;
+}
+
+.debtsRows .row {
+  min-height: var(--debt-row-height);
+  padding-right: 0.35rem;
+}
+
+.debtsRows::-webkit-scrollbar {
+  width: 12px;
+}
+
+.debtsRows::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.debtsRows::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.debtsRows:hover::-webkit-scrollbar-thumb {
+  background: #8b1a2f;
+}
+
+.debtsRows::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1.35rem;
+}
+
+.person {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.avatar {
+  border-radius: 999px;
+}
+
+.personLine {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  color: #1f1a17;
+  font-size: clamp(0.8rem, 1vw, 0.92rem);
+  line-height: 1.25;
+}
+
+.personSub {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  color: #5a5652;
+  font-size: clamp(0.68rem, 0.84vw, 0.78rem);
+  line-height: 1.2;
+}
+
+.amount {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(1.35rem, 1.65vw, 1.7rem);
+  font-weight: 600;
+  min-width: 84px;
+  text-align: right;
+  justify-self: end;
+}
+
+.actionButton {
+  background: #be6f8b;
+  color: #f0eae4;
+  border-radius: 8px;
+  padding: 0.58rem 0.78rem;
+  font-size: clamp(0.66rem, 0.8vw, 0.74rem);
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.actionButton:disabled {
+  opacity: 0.66;
+  cursor: default;
+}
+
+.statusBadge {
+  background: rgba(139, 26, 47, 0.12);
+  color: #8b1a2f;
+  border-radius: 8px;
+  padding: 0.58rem 0.78rem;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(0.66rem, 0.8vw, 0.74rem);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.emptyState {
+  margin: 0;
+  color: #5a5652;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.88rem;
+  grid-column: 1 / -1;
+}
+
+.emptyStateDark {
+  margin: 0;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.historyTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.viewAll {
+  font-family: "Poppins", sans-serif;
+  color: #8b1a2f;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.viewAllContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.viewAllArrow {
+  width: 20px;
+  height: 20px;
+  transform: rotate(180deg);
+  filter: brightness(0) saturate(100%) invert(15%) sepia(25%) saturate(4849%) hue-rotate(329deg) brightness(84%) contrast(98%);
+}
+
+.historyRow {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+}
+
+.historyRow .person {
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.historyRows {
+  gap: 1.3rem;
+}
+
+.historyRightAmount {
+  margin: 0;
+  color: #8b1a2f;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(1.35rem, 1.65vw, 1.7rem);
+  font-weight: 600;
+  line-height: 1;
+  min-width: 84px;
+  text-align: right;
+  margin-right: 0.55rem;
+  justify-self: end;
+}
+
+.historyRightSpacer {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.historyAmount {
+  margin: 0;
+  color: #1f1a17;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(0.82rem, 1vw, 0.92rem);
+}
+
+.historyButton {
+  background: #be6f8b;
+  color: #f0eae4;
+  border-radius: 8px;
+  padding: 0.58rem 0.78rem;
+  font-size: clamp(0.66rem, 0.8vw, 0.74rem);
+  line-height: 1;
+}
+
+.bottomGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.bottomCardMaroon {
+  background: #8b1a2f;
+  color: #f0eae4;
+  border-radius: 10px;
+  padding: 0.42rem 0.55rem 0.52rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendarCard {
+  border: none;
+  border-radius: 10px;
+  padding: 0.48rem 0.75rem 0.58rem;
+}
+
+.calendarHeader {
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.calendarNavButton {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.calendarNavButtonRight img {
+  transform: rotate(180deg);
+}
+
+.calendarTitle {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.calendar {
+  margin-top: 0.35rem;
+  display: grid;
+  justify-content: center;
+}
+
+.calendar :global(.react-calendar) {
+  width: min(100%, 340px);
+  border: none;
+  background: transparent;
+  margin: 0;
+  color: #f0eae4;
+  font-family: "Poppins", sans-serif;
+}
+
+.calendar :global(.react-calendar button) {
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+
+.calendar :global(.react-calendar__month-view__weekdays) {
+  margin-bottom: 0.16rem;
+  text-transform: none;
+}
+
+.calendar :global(.react-calendar__month-view__weekdays__weekday) {
+  padding: 0.12rem 0 0.2rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #f0eae4;
+}
+
+.calendar :global(.react-calendar__month-view__weekdays__weekday abbr) {
+  text-decoration: none;
+  font-size: 1rem;
+}
+
+.calendar :global(.react-calendar__month-view__days) {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.2rem 0.34rem;
+}
+
+.calendar :global(.react-calendar__tile) {
+  position: relative;
+  overflow: visible;
+  height: 36px;
+  width: 36px;
+  max-width: 36px;
+  margin-inline: auto;
+  padding: 0;
+  text-align: center;
+  line-height: 36px;
+  color: #f0eae4;
+  font-size: 1.15rem;
+  border-radius: 9px;
+  font-weight: 500;
+}
+
+.calendar :global(.react-calendar__month-view__days__day--neighboringMonth) {
+  color: #f0eae4;
+}
+
+.calendar :global(.react-calendar__tile:enabled:hover),
+.calendar :global(.react-calendar__tile:enabled:focus) {
+  background: transparent;
+}
+
+.calendar :global(.react-calendar__tile--active),
+.calendar :global(.react-calendar__tile--hasActive) {
+  background: transparent;
+}
+
+.calendar :global(.react-calendar__tile--range) {
+  background: #f0eae4;
+  color: #8b1a2f;
+}
+
+.calendar :global(.react-calendar__tile--rangeStart),
+.calendar :global(.react-calendar__tile--rangeEnd),
+.calendar :global(.react-calendar__tile--rangeBothEnds) {
+  background: #be6f8b;
+  color: #f0eae4;
+}
+
+.calendar :global(.react-calendar__tile.payment-day) {
+  background: #f0eae4;
+  color: #8b1a2f;
+}
+
+.calendar :global(.react-calendar__tile.payment-day):enabled:hover,
+.calendar :global(.react-calendar__tile.payment-day):enabled:focus {
+  background: #f0eae4;
+  color: #8b1a2f;
+  z-index: 20;
+}
+
+.paymentAnchor {
+  position: absolute;
+  inset: -2px;
+  display: block;
+  cursor: pointer;
+}
+
+.paymentPopoverContent {
+  position: absolute;
+  background: #f0eae4;
+  color: #1f1a17;
+  border-radius: 10px;
+  padding: 0.42rem 0.6rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  z-index: 60;
+}
+
+.popoverLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pieTitle {
+  margin: 0.55rem 0 0;
+  text-align: center;
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pieWrap {
+  margin-top: 0.2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-height: 220px;
+}
+
+.pieChartWrap {
+  min-height: 220px;
+  height: 220px;
+  width: 220px;
+  flex: 0 0 220px;
+}
+
+.pieLegend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.32rem;
+  align-content: center;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.dot {
+  box-sizing: border-box;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.dotOutlined {
+  background: transparent;
+  border: 2px solid #f0eae4;
+}
+
+@media (max-width: 900px) {
+  .panel {
+    width: min(100%, 650px);
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .bottomGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pieChartWrap {
+    min-height: 160px;
+  }
+
+  .calendar :global(.react-calendar__tile) {
+    height: 34px;
+    width: 34px;
+    max-width: 34px;
+    line-height: 34px;
+    font-size: 1rem;
+  }
+
+  .calendar :global(.react-calendar__month-view__weekdays__weekday abbr) {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    align-items: start;
+  }
+
+  .panel {
+    margin-top: 0.4rem;
+  }
+
+  .backLink {
+    justify-self: start;
+    transform: translateX(-0.8rem);
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .summaryTitle {
+    font-size: 20px;
+  }
+
+  .summaryValue {
+    font-size: 20px;
+  }
+
+  .summaryMeta {
+    font-size: 16px;
+  }
+
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    justify-items: stretch;
+    gap: 0.9rem;
+  }
+}
