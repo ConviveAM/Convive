@@ -119,13 +119,8 @@
 
 .memberAvatarWrap {
   position: relative;
-  width: 46px;
-  height: 46px;
-}
-
-.memberAvatarCustom {
-  transform: scale(0.64);
-  transform-origin: center;
+  width: 34px;
+  height: 34px;
 }
 
 .memberDeleteIconButton {
