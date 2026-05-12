@@ -23,6 +23,7 @@ export function formatShortDate(dateValue: string) {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+    timeZone: "UTC",
   }).format(parsedDate);
 }
 
@@ -36,6 +37,7 @@ export function formatMonthLabel(dateValue: string) {
   const formatted = new Intl.DateTimeFormat("es-ES", {
     month: "long",
     year: "numeric",
+    timeZone: "UTC",
   }).format(parsedDate);
 
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
