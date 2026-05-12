@@ -155,17 +155,17 @@
 }
 
 .personAvatarFrame {
-  width: 58px;
-  height: 58px;
-  min-width: 58px;
-  min-height: 58px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
   border-radius: 999px;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-right: 0.7rem !important;
+  margin-right: 0.35rem !important;
 }
 
 .smallAmount {
