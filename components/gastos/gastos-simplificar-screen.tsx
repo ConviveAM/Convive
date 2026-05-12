@@ -82,9 +82,8 @@ export function GastosSimplificarScreen({
                           <ProfileAvatar
                             src={settlement.from_avatar_url}
                             alt=""
-                            width={72}
-                            height={72}
-                            className={styles.personAvatar}
+                            width={58}
+                            height={58}
                           />
                         </span>
                         <span className={styles.personName}>{settlement.from_name}</span>
@@ -103,9 +102,8 @@ export function GastosSimplificarScreen({
                           <ProfileAvatar
                             src={settlement.to_avatar_url}
                             alt=""
-                            width={72}
-                            height={72}
-                            className={styles.personAvatar}
+                            width={58}
+                            height={58}
                           />
                         </span>
                         <span className={styles.personName}>{settlement.to_name}</span>
