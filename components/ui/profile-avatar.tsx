@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 import { PROFILE_AVATAR_DEFAULTS } from "../../lib/profile-avatar";
 
 type ProfileAvatarProps = {
@@ -37,22 +35,9 @@ export function ProfileAvatar({
     height: "100%",
     borderRadius: "999px",
     objectFit: "cover",
+    objectPosition: "center",
     display: "block",
   } as const;
-
-  if (resolvedSrc.startsWith("/")) {
-    return (
-      <span className={className} style={wrapperStyle}>
-        <Image
-          src={resolvedSrc}
-          alt={alt}
-          width={width}
-          height={height}
-          style={imageStyle}
-        />
-      </span>
-    );
-  }
 
   return (
     <span className={className} style={wrapperStyle}>
